@@ -1,0 +1,44 @@
+{
+  "data": {
+    "rows": 593,
+    "works": 34,
+    "sources": 8
+  },
+  "random_split/baseline_linear": {
+    "MAE_rub": 327.2,
+    "MAPE_pct": 47.2,
+    "R2": 0.46
+  },
+  "random_split/xgboost": {
+    "MAE_rub": 323.7,
+    "MAPE_pct": 44.1,
+    "R2": 0.236
+  },
+  "company_holdout/sources": [
+    "https://nsk.365rem.ru/ceni-na-otdelochnie-raboti.asp",
+    "https://printsipremonta.ru/prais-list/"
+  ],
+  "company_holdout/baseline_linear": {
+    "MAE_rub": 423.8,
+    "MAPE_pct": 64.6,
+    "R2": 0.287
+  },
+  "company_holdout/xgboost": {
+    "MAE_rub": 433.2,
+    "MAPE_pct": 55.7,
+    "R2": 0.279
+  },
+  "anomaly_detection": {
+    "n_test": 118,
+    "n_anomalies": 28,
+    "ROC_AUC": 0.738,
+    "precision": 0.5,
+    "recall": 0.607,
+    "confusion": {
+      "TP": 17,
+      "FP": 17,
+      "FN": 11,
+      "TN": 73
+    }
+  }
+}
