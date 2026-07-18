@@ -27,26 +27,45 @@ HEADERS = {
     "Accept-Language": "ru-RU,ru;q=0.9",
 }
 
-# (URL, регион). Регионы: Москва / СПб / Регион.
+# (URL, город). Регион кодируется конкретным городом — так у признака больше сигнала.
 SOURCES = [
     # --- Москва ---
     ("https://titanremont.ru/price", "Москва"),
     ("https://stroyremdizayn.ru/cena-remonta-i-otdelki-kvartir-pod-klyuch/", "Москва"),
     ("https://kronotech.ru/prays-shtukaturka-sten", "Москва"),
-    ("https://remont-podkljuch.ru/shtukaturka_sten_cena/", "Москва"),
-    ("https://td-tsk.ru/services/malyarnye-raboty-i-shtukaturnye-raboty/", "Москва"),
+    ("https://remont-uroven.ru/price.html", "Москва"),
+    ("https://remont-f.ru/remont-kvartir-pod-kluch/price.php", "Москва"),
+    ("https://remonty-msk.ru/price/", "Москва"),
+    ("https://profiremontnik.ru/tseny/otdelochnye-raboty/", "Москва"),
+    ("https://www.remontstroyka.ru/tseny/prays-list-na-raboty.php", "Москва"),
+    ("https://remont-novostroiki.ru/prays-list-na-remont-kvartir/", "Москва"),
+    ("https://aqremont.ru/price", "Москва"),
     # --- Санкт-Петербург ---
     ("https://www.prorabneva.ru/price", "СПб"),
-    ("https://www.metkv.ru/price-list", "СПб"),
+    ("https://otdelka-spb.ru/prajjs/", "СПб"),
+    ("https://restroymaster.ru/services/otdelochnye-raboty/", "СПб"),
+    ("https://razvitiee.com/services/otdelochnye-raboty/prays-list-na-otdelochnye-raboty/", "СПб"),
+    ("https://www.stroikahome.ru/prays-otdelka.html", "СПб"),
+    ("https://spb.optimumbuilding.ru/otdelka", "СПб"),
     ("https://etalon-house.spb.ru/uslugi/czeny-na-otdelochnye-raboty/", "СПб"),
-    ("https://remontvspb.ru/prajs/", "СПб"),
-    ("https://remstart.ru/price", "СПб"),
-    # --- Регионы ---
-    ("https://remont-nsk54.ru/prajs_list", "Регион"),
-    ("https://nsk.365rem.ru/ceni-na-otdelochnie-raboti.asp", "Регион"),
-    ("https://remo154.ru/price_otdelka.php", "Регион"),
-    ("https://mastercity54.ru/prices/", "Регион"),
-    ("https://printsipremonta.ru/prais-list/", "Регион"),
+    # --- Новосибирск ---
+    ("https://remont-nsk54.ru/prajs_list", "Новосибирск"),
+    ("https://nsk.365rem.ru/ceni-na-otdelochnie-raboti.asp", "Новосибирск"),
+    ("https://remo154.ru/price_otdelka.php", "Новосибирск"),
+    ("https://mastercity54.ru/prices/", "Новосибирск"),
+    # --- Казань ---
+    ("https://kazan.365rem.ru/ceni-na-otdelochnie-raboti.asp", "Казань"),
+    ("https://remo116.ru/price_otdelka.php", "Казань"),
+    ("https://altair-kzn.ru/price-na-remont-kvartir", "Казань"),
+    ("https://kazan.garantstroikompleks.ru/prajs-list", "Казань"),
+    # --- Нижний Новгород ---
+    ("https://nn.365rem.ru/ceni-na-otdelochnie-raboti.asp", "Нижний Новгород"),
+    ("https://remo152.ru/price_otdelka.php", "Нижний Новгород"),
+    ("https://nn.korona-remont.ru/prices", "Нижний Новгород"),
+    # --- Краснодар ---
+    ("https://krasnodar.365rem.ru/ceni-na-otdelochnie-raboti.asp", "Краснодар"),
+    # --- Екатеринбург ---
+    ("https://printsipremonta.ru/prais-list/", "Екатеринбург"),
 ]
 
 UNIT_MAP = {
