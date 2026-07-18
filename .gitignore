@@ -17,6 +17,9 @@ wandb/
 *.pkl
 *.joblib
 
+# Runtime
+gradio.log
+
 # OS / IDE
 .DS_Store
 .vscode/
