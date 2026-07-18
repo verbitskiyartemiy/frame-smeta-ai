@@ -119,10 +119,13 @@ def empirical_corridor(df_tr):
 
 
 def anomaly_eval(df_tr, df_te) -> dict:
-    """Коридор P10-P90 (эмпирический) + подмешанные аномалии с метками."""
+    """СТРЕСС-ТЕСТ: коридор P10-P90 + РЕАЛИСТИЧНЫЕ синтетические аномалии.
+
+    Величины подобраны под реальное завышение смет (+25..80%), а не ×3 —
+    так тест честно сложный (поймать +30% труднее, чем утроение цены).
+    """
     corridor = empirical_corridor(df_tr)
 
-    # Подмешиваем аномалии: 15% завышений (x1.6-3.0), 10% занижений (x0.3-0.6).
     te = df_te.copy().reset_index(drop=True)
     n = len(te)
     labels = np.zeros(n, dtype=int)
@@ -131,8 +134,8 @@ def anomaly_eval(df_tr, df_te) -> dict:
     k_lo = int(n * 0.10)
     pick = RNG.permutation(n)
     idx_hi, idx_lo = pick[:k_hi], pick[k_hi:k_hi + k_lo]
-    prices[idx_hi] *= RNG.uniform(1.6, 3.0, size=k_hi)
-    prices[idx_lo] *= RNG.uniform(0.3, 0.6, size=k_lo)
+    prices[idx_hi] *= RNG.uniform(1.25, 1.8, size=k_hi)   # завышение +25..80%
+    prices[idx_lo] *= RNG.uniform(0.5, 0.75, size=k_lo)   # занижение -25..50%
     labels[idx_hi] = 1
     labels[idx_lo] = 1
 
@@ -157,6 +160,60 @@ def anomaly_eval(df_tr, df_te) -> dict:
         "confusion": {"TP": int(tp), "FP": int(fp), "FN": int(fn), "TN": int(tn)},
     }
     return metrics, labels, score
+
+
+def loco_anomaly_eval(df) -> tuple:
+    """РЕАЛЬНАЯ проверка детекции: leave-one-company-out на рыночных выбросах.
+
+    Никакой синтетики. Логика:
+      1. Метка 'реальный рыночный выброс' = цена в топ/низ 10% РЫНКА по этой
+         работе (по всем 22 реальным компаниям). Это факт из данных.
+      2. Детектор: линейная модель справедливой цены обучается БЕЗ данной
+         компании (она полностью невидима). Для её реальных цен считаем
+         отклонение от предсказанной справедливой цены (в разбросах остатков).
+      3. Проверяем, ловит ли детектор реальные рыночные выбросы невиданной
+         компании. Модель учитывает регион — поэтому 'дорогая для Москвы, но
+         нормальная' цена НЕ флажится (честное расхождение с грубой рыночной
+         меткой, а не ошибка).
+
+    Оговорка для защиты: рыночный выброс != доказанное мошенничество; премиум-
+    подрядчик законно дороже. Но 'отклонение от рынка' — ровно то, что делает
+    фича 5.2, и оно измеримо на реальных данных.
+    """
+    work_q = df.groupby("canonical_work")["price"].agg(
+        lo=lambda s: s.quantile(0.10), hi=lambda s: s.quantile(0.90))
+    labels_all, scores_all = [], []
+    for company in df["source"].unique():
+        train = df[df["source"] != company]
+        test = df[df["source"] == company]
+        if len(test) < 3:
+            continue
+        model = make_pipe(LinearRegression())
+        model.fit(train[FEATURES], np.log(train["price"]))
+        # Разброс остатков на обучении -> масштаб для скоринга.
+        tr_resid = np.log(train["price"].to_numpy(float)) - model.predict(train[FEATURES])
+        sigma = float(np.std(tr_resid)) or 1e-6
+        resid = np.log(test["price"].to_numpy(float)) - model.predict(test[FEATURES])
+        scores_all.append(np.abs(resid) / sigma)
+        lo_map = test["canonical_work"].map(work_q["lo"]).to_numpy(float)
+        hi_map = test["canonical_work"].map(work_q["hi"]).to_numpy(float)
+        p = test["price"].to_numpy(float)
+        labels_all.append(((p < lo_map) | (p > hi_map)).astype(int))
+
+    labels = np.concatenate(labels_all)
+    scores = np.concatenate(scores_all)
+    flags = (scores > 2.0).astype(int)  # порог: отклонение > 2 разбросов остатков
+    tn, fp, fn, tp = confusion_matrix(labels, flags).ravel()
+    metrics = {
+        "n_test": int(len(labels)),
+        "n_real_anomalies": int(labels.sum()),
+        "ROC_AUC": round(float(roc_auc_score(labels, scores)), 3),
+        "average_precision": round(float(average_precision_score(labels, scores)), 3),
+        "precision": round(float(tp / (tp + fp)) if tp + fp else 0.0, 3),
+        "recall": round(float(tp / (tp + fn)) if tp + fn else 0.0, 3),
+        "confusion": {"TP": int(tp), "FP": int(fp), "FN": int(fn), "TN": int(tn)},
+    }
+    return metrics, labels, scores
 
 
 def kfold_eval(df, make_model, k=5) -> dict:
@@ -197,7 +254,7 @@ def tune_xgb(df) -> tuple:
     return best  # (mape, params, cv_metrics)
 
 
-def plot_roc_pr(labels, scores, roc_path, pr_path):
+def plot_roc_pr(labels, scores, roc_path, pr_path, label=""):
     """ROC- и PR-кривые для детекции аномалий (как у примеров-эталонов)."""
     fpr, tpr, _ = roc_curve(labels, scores)
     auc = roc_auc_score(labels, scores)
@@ -215,7 +272,10 @@ def plot_roc_pr(labels, scores, roc_path, pr_path):
     for ax in (a1, a2):
         ax.spines[["top", "right"]].set_visible(False)
         ax.set_xlim(0, 1); ax.set_ylim(0, 1.02)
-    fig.tight_layout(); fig.savefig(roc_path, dpi=140); plt.close(fig)
+    if label:
+        fig.suptitle(label, fontsize=13, y=1.02)
+    fig.tight_layout(); fig.savefig(roc_path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
     return round(float(auc), 3), round(float(ap), 3)
 
 
@@ -367,19 +427,35 @@ def main():
     print(f"\n[per-work] точнее всего: {list(per_work['easiest'])[:2]} | "
           f"сложнее всего: {list(per_work['hardest'])[:2]}")
 
-    # --- Детекция аномалий + ROC/PR-кривые ---
-    an, an_labels, an_scores = anomaly_eval(tr, te)
-    auc, ap = plot_roc_pr(an_labels, an_scores,
-                          os.path.join(fig_dir, "09_anomaly_roc_pr.png"),
-                          os.path.join(fig_dir, "09_anomaly_roc_pr.png"))
-    an["average_precision"] = ap
-    results["anomaly_detection"] = an
+    # --- Детекция аномалий №1: РЕАЛЬНАЯ проверка (leave-one-company-out) ---
+    real_an, real_labels, real_scores = loco_anomaly_eval(df)
+    plot_roc_pr(real_labels, real_scores,
+                os.path.join(fig_dir, "09_anomaly_real_roc_pr.png"), None,
+                label="РЕАЛЬНАЯ проверка: рыночные выбросы (leave-one-company-out)")
+    results["anomaly_real_loco"] = real_an
+    print(f"\n[anomaly РЕАЛЬНАЯ/LOCO] ROC-AUC={real_an['ROC_AUC']}  "
+          f"AP={real_an['average_precision']}  precision={real_an['precision']}  "
+          f"recall={real_an['recall']}  "
+          f"(реальных рыночных выбросов {real_an['n_real_anomalies']}/{real_an['n_test']})")
+
+    # --- Детекция аномалий №2: стресс-тест на реалистичной синтетике (+25..80%) ---
+    syn_an, syn_labels, syn_scores = anomaly_eval(tr, te)
+    _, syn_ap = plot_roc_pr(syn_labels, syn_scores,
+                            os.path.join(fig_dir, "10_anomaly_synthetic_roc_pr.png"), None,
+                            label="СТРЕСС-ТЕСТ: реалистичные синтетические завышения +25..80%")
+    syn_an["average_precision"] = syn_ap
+    results["anomaly_synthetic_stress"] = syn_an
+    print(f"[anomaly СИНТ/стресс]  ROC-AUC={syn_an['ROC_AUC']}  AP={syn_ap}  "
+          f"precision={syn_an['precision']}  recall={syn_an['recall']}")
+
     with mlflow.start_run(run_name="anomaly_detection"):
-        mlflow.log_metrics({k: an[k] for k in ("ROC_AUC", "precision", "recall")})
-        mlflow.log_metric("average_precision", ap)
-        mlflow.log_artifact(os.path.join(fig_dir, "09_anomaly_roc_pr.png"))
-    print(f"\n[anomaly] ROC-AUC={an['ROC_AUC']}  AP={ap}  precision={an['precision']}  "
-          f"recall={an['recall']}  (аномалий {an['n_anomalies']}/{an['n_test']})")
+        mlflow.log_metrics({"real_ROC_AUC": real_an["ROC_AUC"],
+                            "real_AP": real_an["average_precision"],
+                            "real_precision": real_an["precision"],
+                            "real_recall": real_an["recall"],
+                            "synth_ROC_AUC": syn_an["ROC_AUC"], "synth_AP": syn_ap})
+        mlflow.log_artifact(os.path.join(fig_dir, "09_anomaly_real_roc_pr.png"))
+        mlflow.log_artifact(os.path.join(fig_dir, "10_anomaly_synthetic_roc_pr.png"))
 
     # --- Финальная (продакшн) модель: линейная — победитель по CV ---
     final = make_pipe(LinearRegression())

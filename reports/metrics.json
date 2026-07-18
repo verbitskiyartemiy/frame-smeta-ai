@@ -94,19 +94,33 @@
       "Демонтаж прочее": 65.9
     }
   },
-  "anomaly_detection": {
+  "anomaly_real_loco": {
+    "n_test": 2110,
+    "n_real_anomalies": 391,
+    "ROC_AUC": 0.872,
+    "average_precision": 0.622,
+    "precision": 0.742,
+    "recall": 0.345,
+    "confusion": {
+      "TP": 135,
+      "FP": 47,
+      "FN": 256,
+      "TN": 1672
+    }
+  },
+  "anomaly_synthetic_stress": {
     "n_test": 422,
     "n_anomalies": 105,
-    "ROC_AUC": 0.737,
-    "precision": 0.496,
-    "recall": 0.629,
+    "ROC_AUC": 0.587,
+    "precision": 0.396,
+    "recall": 0.419,
     "confusion": {
-      "TP": 66,
+      "TP": 44,
       "FP": 67,
-      "FN": 39,
+      "FN": 61,
       "TN": 250
     },
-    "average_precision": 0.652
+    "average_precision": 0.421
   },
   "feature_importance": {
     "canonical_work": 0.505,
