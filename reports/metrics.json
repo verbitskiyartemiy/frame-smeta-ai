@@ -40,5 +40,12 @@
       "FN": 11,
       "TN": 73
     }
+  },
+  "feature_importance": {
+    "canonical_work": 0.419,
+    "category": 0.497,
+    "unit": 0.035,
+    "region": 0.001,
+    "source": 0.048
   }
 }

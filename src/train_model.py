@@ -25,6 +25,10 @@ import json
 import os
 
 import joblib
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -39,6 +43,12 @@ from xgboost import XGBRegressor
 
 RNG = np.random.default_rng(42)
 BASE = os.path.dirname(__file__)
+# XGBoost-гиперпараметры (одни для всех запусков — честное сравнение).
+XGB_PARAMS = dict(n_estimators=200, max_depth=3, learning_rate=0.08,
+                  subsample=0.9, reg_lambda=2.0, random_state=42)
+# Человекочитаемые названия признаков для графика.
+FEAT_RUS = {"canonical_work": "Вид работы", "category": "Категория",
+            "unit": "Единица", "region": "Регион", "source": "Компания"}
 # source = компания-источник: кодирует ценовой сегмент компании (премиум/эконом).
 # Для новой компании (domain shift) признак неизвестен -> нулевой вектор, модель
 # опирается на работу/регион. Это отражает реальный продукт: сегмент подрядчика
@@ -144,6 +154,47 @@ def anomaly_eval(df_tr, df_te) -> dict:
     }
 
 
+def feature_importance(final_pipe) -> dict:
+    """Важность признаков XGBoost, агрегированная к ИСХОДНЫМ признакам.
+
+    OneHotEncoder разбивает 'регион' на много колонок (регион_Москва, ...).
+    Мы суммируем важность обратно по исходному признаку, чтобы ответить на
+    вопрос 'что определяет цену: вид работы, регион или компания?'.
+    """
+    enc = final_pipe.named_steps["enc"]
+    names = enc.get_feature_names_out()
+    imp = final_pipe.named_steps["model"].feature_importances_
+    agg = {f: 0.0 for f in FEATURES}
+    for name, val in zip(names, imp):
+        col = name.split("__", 1)[1]  # убрать префикс 'cat__'
+        for f in FEATURES:
+            if col.startswith(f + "_"):
+                agg[f] += float(val)
+                break
+    total = sum(agg.values()) or 1.0
+    return {f: round(agg[f] / total, 3) for f in FEATURES}
+
+
+def plot_importance(imp: dict, path: str):
+    """График важности признаков (dataviz: величина -> гориз. бары, один цвет)."""
+    items = sorted(imp.items(), key=lambda x: x[1])  # снизу вверх по возрастанию
+    labels = [FEAT_RUS[k] for k, _ in items]
+    vals = [v * 100 for _, v in items]
+    fig, ax = plt.subplots(figsize=(7, 3.6))
+    ax.barh(labels, vals, color="#2f6db0", height=0.62)
+    for i, v in enumerate(vals):
+        ax.text(v + max(vals) * 0.015, i, f"{v:.0f}%", va="center", fontsize=10,
+                color="#333")
+    ax.set_xlabel("Влияние на предсказание цены, %")
+    ax.set_title("Что определяет цену: важность признаков", fontsize=12, pad=10)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(length=0)
+    ax.set_xlim(0, max(vals) * 1.15)
+    fig.tight_layout()
+    fig.savefig(path, dpi=140)
+    plt.close(fig)
+
+
 def main():
     df = pd.read_csv(os.path.join(BASE, "..", "data", "processed", "clean_prices.csv"))
     print(f"Обучающих данных: {len(df)} реальных цен, {df['canonical_work'].nunique()} работ\n")
@@ -151,13 +202,28 @@ def main():
     results = {"data": {"rows": len(df), "works": int(df['canonical_work'].nunique()),
                         "sources": int(df['source'].nunique())}}
 
+    # --- MLflow: журнал экспериментов в sqlite (рекомендованный бэкенд) ---
+    db = os.path.abspath(os.path.join(BASE, "..", "mlflow.db")).replace("\\", "/")
+    mlflow.set_tracking_uri("sqlite:///" + db)
+    mlflow.set_experiment("frame-smeta-price")
+
+    def logged_eval(scenario, name, model, Xtr, ytr, Xte, yte):
+        """Обучить + оценить + записать запуск в MLflow."""
+        with mlflow.start_run(run_name=f"{scenario}__{name}"):
+            mlflow.log_param("model", name)
+            mlflow.log_param("split", scenario)
+            if name == "xgboost":
+                mlflow.log_params(XGB_PARAMS)
+            m = evaluate(make_pipe(model), Xtr, ytr, Xte, yte)
+            mlflow.log_metrics(m)
+            mlflow.set_tag("data", "real_price_lists")
+        return m
+
     # --- Сценарий A: случайный сплит ---
     tr, te = split_random(df)
     for name, model in [("baseline_linear", LinearRegression()),
-                        ("xgboost", XGBRegressor(n_estimators=200, max_depth=3,
-                                                 learning_rate=0.08, subsample=0.9,
-                                                 reg_lambda=2.0, random_state=42))]:
-        m = evaluate(make_pipe(model), tr[FEATURES], tr["price"], te[FEATURES], te["price"])
+                        ("xgboost", XGBRegressor(**XGB_PARAMS))]:
+        m = logged_eval("random", name, model, tr[FEATURES], tr["price"], te[FEATURES], te["price"])
         results[f"random_split/{name}"] = m
         print(f"[random ] {name:16} MAE={m['MAE_rub']:8} руб  MAPE={m['MAPE_pct']:5}%  R2={m['R2']}")
 
@@ -165,40 +231,56 @@ def main():
     tr_c, te_c, holdout = split_by_company(df)
     results["company_holdout/sources"] = holdout
     for name, model in [("baseline_linear", LinearRegression()),
-                        ("xgboost", XGBRegressor(n_estimators=200, max_depth=3,
-                                                 learning_rate=0.08, subsample=0.9,
-                                                 reg_lambda=2.0, random_state=42))]:
-        m = evaluate(make_pipe(model), tr_c[FEATURES], tr_c["price"], te_c[FEATURES], te_c["price"])
+                        ("xgboost", XGBRegressor(**XGB_PARAMS))]:
+        m = logged_eval("company", name, model, tr_c[FEATURES], tr_c["price"], te_c[FEATURES], te_c["price"])
         results[f"company_holdout/{name}"] = m
         print(f"[company] {name:16} MAE={m['MAE_rub']:8} руб  MAPE={m['MAPE_pct']:5}%  R2={m['R2']}")
 
     # --- Детекция аномалий ---
     an = anomaly_eval(tr, te)
     results["anomaly_detection"] = an
+    with mlflow.start_run(run_name="anomaly_detection"):
+        mlflow.log_metrics({k: an[k] for k in ("ROC_AUC", "precision", "recall")})
     print(f"\n[anomaly] ROC-AUC={an['ROC_AUC']}  precision={an['precision']}  "
           f"recall={an['recall']}  (аномалий {an['n_anomalies']}/{an['n_test']})")
     print(f"          confusion: {an['confusion']}")
 
-    # --- Сохранение финальной модели (на всех данных) и метрик ---
-    final = make_pipe(XGBRegressor(n_estimators=200, max_depth=3,
-                                   learning_rate=0.08, subsample=0.9,
-                                   reg_lambda=2.0, random_state=42))
+    # --- Финальная модель (на всех данных) + feature importance ---
+    final = make_pipe(XGBRegressor(**XGB_PARAMS))
     final.fit(df[FEATURES], np.log(df["price"]))
     q_lo = make_pipe(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
     q_hi = make_pipe(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
     q_lo.fit(df[FEATURES], np.log(df["price"]))
     q_hi.fit(df[FEATURES], np.log(df["price"]))
 
+    imp = feature_importance(final)
+    results["feature_importance"] = imp
+    print("\n[importance]", {FEAT_RUS[k]: f"{v*100:.0f}%" for k, v in
+                             sorted(imp.items(), key=lambda x: -x[1])})
+
+    rep_dir = os.path.abspath(os.path.join(BASE, "..", "reports"))
+    fig_dir = os.path.join(rep_dir, "figures")
+    os.makedirs(fig_dir, exist_ok=True)
+    imp_png = os.path.join(fig_dir, "07_feature_importance.png")
+    plot_importance(imp, imp_png)
+
+    # Финальный запуск: логируем важность признаков и график в MLflow.
+    with mlflow.start_run(run_name="final_model"):
+        mlflow.log_params(XGB_PARAMS)
+        mlflow.log_metrics({f"importance_{k}": v for k, v in imp.items()})
+        mlflow.log_artifact(imp_png)
+
     models_dir = os.path.abspath(os.path.join(BASE, "..", "models"))
     os.makedirs(models_dir, exist_ok=True)
     joblib.dump({"price": final, "q_lo": q_lo, "q_hi": q_hi},
                 os.path.join(models_dir, "frame_smeta_model.joblib"))
 
-    rep_dir = os.path.abspath(os.path.join(BASE, "..", "reports"))
-    os.makedirs(rep_dir, exist_ok=True)
     with open(os.path.join(rep_dir, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
-    print(f"\nМодель: models/frame_smeta_model.joblib\nМетрики: reports/metrics.json")
+    print(f"\nМодель: models/frame_smeta_model.joblib")
+    print(f"Метрики: reports/metrics.json")
+    print(f"График важности: reports/figures/07_feature_importance.png")
+    print(f"MLflow-журнал: mlruns/  (посмотреть: mlflow ui)")
 
 
 if __name__ == "__main__":
