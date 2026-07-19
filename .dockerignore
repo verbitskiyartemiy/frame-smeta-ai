@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+mlruns/
+mlartifacts/
+mlflow.db
+models/
+gradio.log
+.git/
+reports/figures/
+data/raw/
+data/real/

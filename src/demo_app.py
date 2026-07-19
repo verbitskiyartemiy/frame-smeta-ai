@@ -18,7 +18,7 @@ import sys
 import pandas as pd
 
 sys.path.append(os.path.dirname(__file__))
-from clean_prices import to_canonical  # переиспользуем маппер названий работ
+from clean_prices import to_canonical  # маппер названий работ -> каноническая
 
 BASE = os.path.dirname(__file__)
 DF = pd.read_csv(os.path.join(BASE, "..", "data", "processed", "clean_prices.csv"))
@@ -142,5 +142,5 @@ def build_app():
 
 
 if __name__ == "__main__":
-    build_app().launch(server_name="127.0.0.1", server_port=7860,
+    build_app().launch(server_name="0.0.0.0", server_port=7860,
                        inbrowser=False, show_error=True)
