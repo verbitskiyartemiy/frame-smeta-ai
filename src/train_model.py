@@ -55,12 +55,23 @@ def split_random(df, test_size=0.2):
     return df.iloc[idx[n_test:]], df.iloc[idx[:n_test]]
 
 
-def split_by_company(df, n_holdout=2):
-    sources = df.groupby("source").size().sort_values()
-    holdout = list(sources.index[len(sources)//2 - 1: len(sources)//2 - 1 + n_holdout])
-    te = df[df["source"].isin(holdout)]
-    tr = df[~df["source"].isin(holdout)]
-    return tr, te, holdout
+def loco_price_eval(df, make_model, min_test=5) -> dict:
+    maes, mapes, r2s = [], [], []
+    for company in df["source"].unique():
+        train = df[df["source"] != company]
+        test = df[df["source"] == company]
+        if len(test) < min_test:
+            continue
+        pipe = make_pipe(make_model())
+        pipe.fit(train[FEATURES], np.log(train["price"]))
+        pred = np.exp(pipe.predict(test[FEATURES]))
+        maes.append(mean_absolute_error(test["price"], pred))
+        mapes.append(mean_absolute_percentage_error(test["price"], pred) * 100)
+        r2s.append(r2_score(test["price"], pred))
+    return {"n_companies": len(maes),
+            "MAE": (round(float(np.mean(maes)), 1), round(float(np.std(maes)), 1)),
+            "MAPE": (round(float(np.mean(mapes)), 1), round(float(np.std(mapes)), 1)),
+            "R2": (round(float(np.mean(r2s)), 3), round(float(np.std(r2s)), 3))}
 
 
 def empirical_corridor(df_tr):
@@ -284,13 +295,19 @@ def main():
         results[f"random_split/{name}"] = m
         print(f"[random ] {name:16} MAE={m['MAE_rub']:8} руб  MAPE={m['MAPE_pct']:5}%  R2={m['R2']}")
 
-    tr_c, te_c, holdout = split_by_company(df)
-    results["company_holdout/sources"] = holdout
-    for name, model in [("baseline_linear", LinearRegression()),
-                        ("xgboost", XGBRegressor(**XGB_PARAMS))]:
-        m = logged_eval("company", name, model, tr_c[FEATURES], tr_c["price"], te_c[FEATURES], te_c["price"])
-        results[f"company_holdout/{name}"] = m
-        print(f"[company] {name:16} MAE={m['MAE_rub']:8} руб  MAPE={m['MAPE_pct']:5}%  R2={m['R2']}")
+    for name, ctor in [("baseline_linear", LinearRegression),
+                       ("xgboost", lambda: XGBRegressor(**XGB_PARAMS))]:
+        m = loco_price_eval(df, ctor)
+        results[f"company_loco/{name}"] = m
+        with mlflow.start_run(run_name=f"company_loco__{name}"):
+            mlflow.log_param("model", name)
+            mlflow.log_param("split", "company_loco")
+            mlflow.log_param("n_companies", m["n_companies"])
+            mlflow.log_metrics({"MAPE_mean": m["MAPE"][0], "MAPE_std": m["MAPE"][1],
+                                "R2_mean": m["R2"][0], "R2_std": m["R2"][1]})
+        print(f"[company-LOCO] {name:16} R2={m['R2'][0]}±{m['R2'][1]}  "
+              f"MAPE={m['MAPE'][0]}±{m['MAPE'][1]}%  MAE={m['MAE'][0]}±{m['MAE'][1]}  "
+              f"(n={m['n_companies']} компаний)")
 
     rep_dir = os.path.abspath(os.path.join(BASE, "..", "reports"))
     fig_dir = os.path.join(rep_dir, "figures")

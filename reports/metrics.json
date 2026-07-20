@@ -14,19 +14,35 @@
     "MAPE_pct": 36.6,
     "R2": 0.684
   },
-  "company_holdout/sources": [
-    "https://remo116.ru/price_otdelka.php",
-    "https://remo152.ru/price_otdelka.php"
-  ],
-  "company_holdout/baseline_linear": {
-    "MAE_rub": 130.7,
-    "MAPE_pct": 30.4,
-    "R2": 0.597
+  "company_loco/baseline_linear": {
+    "n_companies": 22,
+    "MAE": [
+      232.7,
+      128.0
+    ],
+    "MAPE": [
+      45.2,
+      10.9
+    ],
+    "R2": [
+      0.7,
+      0.094
+    ]
   },
-  "company_holdout/xgboost": {
-    "MAE_rub": 141.1,
-    "MAPE_pct": 34.2,
-    "R2": 0.555
+  "company_loco/xgboost": {
+    "n_companies": 22,
+    "MAE": [
+      234.8,
+      130.1
+    ],
+    "MAPE": [
+      44.6,
+      10.4
+    ],
+    "R2": [
+      0.666,
+      0.116
+    ]
   },
   "cv/linear": {
     "MAE": [
