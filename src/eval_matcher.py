@@ -1,14 +1,3 @@
-"""
-Эксперимент: доказать пользу семантического матчинга (эмбеддинги vs regex).
-
-Меряем на РЕАЛЬНЫХ названиях работ из собранных прайсов:
-- покрытие regex-правилами (сколько названий распознано);
-- покрытие эмбеддингами (по порогу косинусной близости);
-- насколько эмбеддинги РАСШИРЯЮТ покрытие и примеры «спасённых» названий.
-
-Это честная оценка: нововведение оправдано только если реально повышает
-покрытие без падения качества (примеры показываем глазами).
-"""
 from __future__ import annotations
 import os
 import sys
@@ -16,8 +5,8 @@ import sys
 import pandas as pd
 
 sys.path.append(os.path.dirname(__file__))
-from clean_prices import to_canonical  # regex-маппер
-from work_matcher import get_matcher    # эмбеддинги
+from clean_prices import to_canonical
+from work_matcher import get_matcher
 
 BASE = os.path.dirname(__file__)
 
@@ -27,10 +16,9 @@ def main():
     names = sorted(raw["work_raw"].dropna().unique().tolist())
     print(f"Уникальных названий работ: {len(names)}")
 
-    matcher = get_matcher(threshold=0.0)  # без отсечки — считаем сами
+    matcher = get_matcher(threshold=0.0)
 
     n = len(names)
-    # Для каждого названия: regex-ответ, эмбеддинг-ответ (топ) и близость.
     rows = []
     for name in names:
         r = to_canonical(name)[0]
@@ -39,15 +27,11 @@ def main():
 
     regex_ok = sum(r is not None for _, r, _, _ in rows)
 
-    # (1) ТОЧНОСТЬ эмбеддингов: на названиях, где regex дал ответ (эталон),
-    #     совпадает ли топ эмбеддинга с regex? Меряем по порогам.
     print(f"\nУникальных названий: {n}")
     print(f"Покрытие regex-правилами: {regex_ok}/{n} = {regex_ok/n*100:.0f}%\n")
     print("Порог | Покрытие эмб. | Точность на regex-эталоне (agreement)")
     for thr in (0.50, 0.60, 0.70, 0.80):
         cover = sum(sc >= thr for _, _, e, sc in rows if e is not None)
-        # точность: среди regex-известных, где эмбеддинг тоже сработал (>=thr),
-        # доля совпадений топ-работы с regex.
         agree = tot = 0
         for _, r, e, sc in rows:
             if r is not None and e is not None and sc >= thr:
@@ -63,7 +47,6 @@ def main():
     saved = [(nm, e, round(sc, 2)) for nm, r, e, sc in rows
              if r is None and e is not None and sc >= 0.70]
 
-    # Точность на regex-эталоне при строгом пороге 0.70.
     agree = tot = 0
     for _, r, e, sc in rows:
         if r is not None and e is not None and sc >= 0.70:

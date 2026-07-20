@@ -1,15 +1,3 @@
-"""
-Семантический матчинг названий работ через эмбеддинги (sentence-transformers).
-
-ЗАЧЕМ: раньше названия работ распознавались жёсткими keyword-правилами
-(clean_prices.to_canonical) — они ломались на непривычных формулировках
-("стеночки под маяк" -> не распознано). Здесь мультиязычная нейромодель
-переводит ЛЮБОЕ название в вектор смысла и находит ближайшую каноническую
-работу по косинусной близости. Это устойчиво к перефразировкам.
-
-Модель: paraphrase-multilingual-MiniLM-L12-v2 (50+ языков, 384-мерные векторы,
-работает на CPU). Векторы канонических работ считаются один раз и кэшируются.
-"""
 from __future__ import annotations
 import functools
 
@@ -17,7 +5,6 @@ import numpy as np
 
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 
-# Каноническая работа -> опорные фразы (синонимы повышают качество матчинга).
 CANONICAL_ANCHORS = {
     "Демонтаж обоев": ["демонтаж обоев", "снятие старых обоев", "очистка стен от обоев"],
     "Демонтаж плитки": ["демонтаж плитки", "снятие кафеля", "сбить старую плитку"],
@@ -59,27 +46,23 @@ CANONICAL_ANCHORS = {
 
 
 class WorkMatcher:
-    """Сопоставляет свободный текст работы с канонической по смыслу."""
 
     def __init__(self, threshold: float = 0.55):
         from sentence_transformers import SentenceTransformer
         self.model = SentenceTransformer(MODEL_NAME)
         self.threshold = threshold
-        # Разворачиваем опорные фразы в плоские списки.
         self._phrases, self._labels = [], []
         for canon, phrases in CANONICAL_ANCHORS.items():
             for p in phrases:
                 self._phrases.append(p)
                 self._labels.append(canon)
-        # Нормированные эмбеддинги -> косинус = скалярное произведение.
         self._emb = self.model.encode(self._phrases, normalize_embeddings=True)
 
     def match(self, text: str):
-        """text -> (каноническая работа | None, score)."""
         if not text or not text.strip():
             return None, 0.0
         q = self.model.encode([text], normalize_embeddings=True)[0]
-        sims = self._emb @ q                      # косинусная близость ко всем фразам
+        sims = self._emb @ q
         best = int(np.argmax(sims))
         score = float(sims[best])
         if score < self.threshold:
@@ -89,5 +72,4 @@ class WorkMatcher:
 
 @functools.lru_cache(maxsize=1)
 def get_matcher(threshold: float = 0.55) -> WorkMatcher:
-    """Ленивая единственная загрузка модели (кэш)."""
     return WorkMatcher(threshold=threshold)

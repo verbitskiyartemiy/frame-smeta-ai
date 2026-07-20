@@ -1,15 +1,3 @@
-"""
-FRAME · Демо AI-анализа смет (Gradio).
-
-Живой MVP фичи 5.2: пользователь вставляет смету (позиции ремонта с ценами),
-приложение сопоставляет каждую работу с реальными рыночными данными и помечает
-завышенные/заниженные позиции.
-
-Запуск:  python src/demo_app.py   → открыть http://127.0.0.1:7860
-
-Коридоры справедливой цены берутся из РЕАЛЬНЫХ собранных прайс-листов
-(data/processed/clean_prices.csv, 2110 цен, 22 компании, 7 городов).
-"""
 from __future__ import annotations
 import os
 import re
@@ -18,12 +6,11 @@ import sys
 import pandas as pd
 
 sys.path.append(os.path.dirname(__file__))
-from clean_prices import to_canonical  # маппер названий работ -> каноническая
+from clean_prices import to_canonical
 
 BASE = os.path.dirname(__file__)
 DF = pd.read_csv(os.path.join(BASE, "..", "data", "processed", "clean_prices.csv"))
 
-# Коридор справедливой цены по каждой работе из реальных данных: P10–медиана–P90.
 CORR = DF.groupby("canonical_work")["price"].agg(
     p10=lambda s: s.quantile(0.10),
     p50="median",
@@ -48,7 +35,6 @@ def _num(x: str):
 
 
 def parse_line(line: str):
-    """Строка 'Название; количество; цена' -> (name, qty, unit_price)."""
     parts = [p.strip() for p in line.split(";")]
     if len(parts) >= 3:
         name, qty, price = parts[0], _num(parts[1]) or 1.0, _num(parts[2])
@@ -62,7 +48,6 @@ def parse_line(line: str):
 
 
 def analyze(text: str):
-    """Разобрать смету -> таблица с вердиктами + итоговая сводка."""
     rows = []
     total_quoted = total_fair = 0.0
     flagged = recognized = 0

@@ -1,25 +1,3 @@
-"""
-Обучение модели справедливой цены + детекция аномалий в смете.
-
-Данные: data/processed/clean_prices.csv — РЕАЛЬНЫЕ цены из прайс-листов.
-
-Что делаем:
-1. Признаки: работа, категория, единица, регион (one-hot). Цель: log(цена).
-   Лог-преобразование — потому что цены распределены мультипликативно
-   (ошибка "в 2 раза" важнее ошибки "на 200 руб").
-2. Два сценария валидации:
-   a) random  — случайный сплит 80/20 (классическая проверка);
-   b) company — отложены ЦЕЛЫЕ компании-источники (модель не видела их цен).
-      Это честный тест на domain shift: как модель поведёт себя на прайсе
-      новой компании.
-3. Модели: baseline (линейная регрессия) vs градиентный бустинг (XGBoost).
-   Метрики: MAE (руб), MAPE (%), R².
-4. Детекция аномалий: квантильные модели P10/P90 дают "коридор справедливой
-   цены". В тест подмешиваем синтетические завышения/занижения с метками
-   и меряем ROC-AUC, precision, recall, confusion matrix.
-
-Результаты: reports/metrics.json + reports/figures/*.png + models/*.joblib
-"""
 from __future__ import annotations
 import json
 import os
@@ -47,21 +25,14 @@ from xgboost import XGBRegressor
 
 RNG = np.random.default_rng(42)
 BASE = os.path.dirname(__file__)
-# XGBoost-гиперпараметры (одни для всех запусков — честное сравнение).
 XGB_PARAMS = dict(n_estimators=200, max_depth=3, learning_rate=0.08,
                   subsample=0.9, reg_lambda=2.0, random_state=42)
-# Человекочитаемые названия признаков для графика.
 FEAT_RUS = {"canonical_work": "Вид работы", "category": "Категория",
             "unit": "Единица", "region": "Регион", "source": "Компания"}
-# source = компания-источник: кодирует ценовой сегмент компании (премиум/эконом).
-# Для новой компании (domain shift) признак неизвестен -> нулевой вектор, модель
-# опирается на работу/регион. Это отражает реальный продукт: сегмент подрядчика
-# на платформе известен из его профиля.
 FEATURES = ["canonical_work", "category", "unit", "region", "source"]
 
 
 def make_pipe(model):
-    """Общий конвейер: one-hot кодирование категорий -> модель."""
     enc = ColumnTransformer([
         ("cat", OneHotEncoder(handle_unknown="ignore"), FEATURES),
     ])
@@ -69,7 +40,6 @@ def make_pipe(model):
 
 
 def evaluate(pipe, X_tr, y_tr, X_te, y_te) -> dict:
-    """Обучить на train, посчитать метрики на test (цены в рублях)."""
     pipe.fit(X_tr, np.log(y_tr))
     pred = np.exp(pipe.predict(X_te))
     return {
@@ -86,9 +56,7 @@ def split_random(df, test_size=0.2):
 
 
 def split_by_company(df, n_holdout=2):
-    """Отложить целые компании — тест на 'невиданный' прайс (domain shift)."""
     sources = df.groupby("source").size().sort_values()
-    # Берём средние по размеру источники, чтобы тест был не микроскопическим.
     holdout = list(sources.index[len(sources)//2 - 1: len(sources)//2 - 1 + n_holdout])
     te = df[df["source"].isin(holdout)]
     tr = df[~df["source"].isin(holdout)]
@@ -96,12 +64,6 @@ def split_by_company(df, n_holdout=2):
 
 
 def empirical_corridor(df_tr):
-    """Коридор справедливой цены P10-P90 из РЕАЛЬНЫХ цен.
-
-    Для каждой работы берём эмпирические квантили обучающих цен (если
-    наблюдений >= 5), иначе откатываемся к квантилям категории. Такой
-    "справочник коридоров" устойчивее модельных квантилей на малых данных.
-    """
     by_work = (df_tr.groupby("canonical_work")["price"]
                .agg(n="count", lo=lambda s: s.quantile(0.10),
                     hi=lambda s: s.quantile(0.90)))
@@ -119,11 +81,6 @@ def empirical_corridor(df_tr):
 
 
 def anomaly_eval(df_tr, df_te) -> dict:
-    """СТРЕСС-ТЕСТ: коридор P10-P90 + РЕАЛИСТИЧНЫЕ синтетические аномалии.
-
-    Величины подобраны под реальное завышение смет (+25..80%), а не ×3 —
-    так тест честно сложный (поймать +30% труднее, чем утроение цены).
-    """
     corridor = empirical_corridor(df_tr)
 
     te = df_te.copy().reset_index(drop=True)
@@ -134,19 +91,16 @@ def anomaly_eval(df_tr, df_te) -> dict:
     k_lo = int(n * 0.10)
     pick = RNG.permutation(n)
     idx_hi, idx_lo = pick[:k_hi], pick[k_hi:k_hi + k_lo]
-    prices[idx_hi] *= RNG.uniform(1.25, 1.8, size=k_hi)   # завышение +25..80%
-    prices[idx_lo] *= RNG.uniform(0.5, 0.75, size=k_lo)   # занижение -25..50%
+    prices[idx_hi] *= RNG.uniform(1.25, 1.8, size=k_hi)
+    prices[idx_lo] *= RNG.uniform(0.5, 0.75, size=k_lo)
     labels[idx_hi] = 1
     labels[idx_lo] = 1
 
     bounds = te.apply(corridor, axis=1, result_type="expand")
     lo, hi = bounds[0].to_numpy(float), bounds[1].to_numpy(float)
-    mid = np.sqrt(lo * hi)  # геометрическая середина коридора
+    mid = np.sqrt(lo * hi)
 
-    flags = ((prices < lo) | (prices > hi)).astype(int)     # решение "флаг/не флаг"
-    # Скор аномальности, НОРМИРОВАННЫЙ на ширину коридора данной работы:
-    # для работ с естественно широким разбросом цен отклонение "прощается",
-    # для стабильных работ — то же отклонение даёт высокий скор.
+    flags = ((prices < lo) | (prices > hi)).astype(int)
     half_width = np.maximum(np.log(hi / lo) / 2, 1e-6)
     score = np.abs(np.log(prices / mid)) / half_width
 
@@ -163,23 +117,6 @@ def anomaly_eval(df_tr, df_te) -> dict:
 
 
 def loco_anomaly_eval(df) -> tuple:
-    """РЕАЛЬНАЯ проверка детекции: leave-one-company-out на рыночных выбросах.
-
-    Никакой синтетики. Логика:
-      1. Метка 'реальный рыночный выброс' = цена в топ/низ 10% РЫНКА по этой
-         работе (по всем 22 реальным компаниям). Это факт из данных.
-      2. Детектор: линейная модель справедливой цены обучается БЕЗ данной
-         компании (она полностью невидима). Для её реальных цен считаем
-         отклонение от предсказанной справедливой цены (в разбросах остатков).
-      3. Проверяем, ловит ли детектор реальные рыночные выбросы невиданной
-         компании. Модель учитывает регион — поэтому 'дорогая для Москвы, но
-         нормальная' цена НЕ флажится (честное расхождение с грубой рыночной
-         меткой, а не ошибка).
-
-    Оговорка для защиты: рыночный выброс != доказанное мошенничество; премиум-
-    подрядчик законно дороже. Но 'отклонение от рынка' — ровно то, что делает
-    фича 5.2, и оно измеримо на реальных данных.
-    """
     work_q = df.groupby("canonical_work")["price"].agg(
         lo=lambda s: s.quantile(0.10), hi=lambda s: s.quantile(0.90))
     labels_all, scores_all = [], []
@@ -190,7 +127,6 @@ def loco_anomaly_eval(df) -> tuple:
             continue
         model = make_pipe(LinearRegression())
         model.fit(train[FEATURES], np.log(train["price"]))
-        # Разброс остатков на обучении -> масштаб для скоринга.
         tr_resid = np.log(train["price"].to_numpy(float)) - model.predict(train[FEATURES])
         sigma = float(np.std(tr_resid)) or 1e-6
         resid = np.log(test["price"].to_numpy(float)) - model.predict(test[FEATURES])
@@ -202,7 +138,7 @@ def loco_anomaly_eval(df) -> tuple:
 
     labels = np.concatenate(labels_all)
     scores = np.concatenate(scores_all)
-    flags = (scores > 2.0).astype(int)  # порог: отклонение > 2 разбросов остатков
+    flags = (scores > 2.0).astype(int)
     tn, fp, fn, tp = confusion_matrix(labels, flags).ravel()
     metrics = {
         "n_test": int(len(labels)),
@@ -217,11 +153,6 @@ def loco_anomaly_eval(df) -> tuple:
 
 
 def kfold_eval(df, make_model, k=5) -> dict:
-    """K-блочная кросс-валидация: среднее ± разброс метрик по 5 фолдам.
-
-    Это честнее одного случайного сплита: показывает, устойчив ли результат
-    или это везение конкретного разбиения.
-    """
     kf = KFold(n_splits=k, shuffle=True, random_state=42)
     X, y = df[FEATURES], df["price"].to_numpy(float)
     maes, mapes, r2s = [], [], []
@@ -238,10 +169,6 @@ def kfold_eval(df, make_model, k=5) -> dict:
 
 
 def tune_xgb(df) -> tuple:
-    """Подбор гиперпараметров XGBoost по кросс-валидации (по MAPE).
-
-    Даёт честный ответ на вопрос жюри: 'а вы вообще пытались настроить бустинг?'
-    """
     grid = [dict(max_depth=d, n_estimators=n, learning_rate=lr,
                  subsample=0.9, reg_lambda=2.0, random_state=42)
             for d in (2, 3, 4) for n in (200, 400) for lr in (0.05, 0.1)]
@@ -251,11 +178,10 @@ def tune_xgb(df) -> tuple:
         mape = cv["MAPE"][0]
         if best is None or mape < best[0]:
             best = (mape, params, cv)
-    return best  # (mape, params, cv_metrics)
+    return best
 
 
 def plot_roc_pr(labels, scores, roc_path, pr_path, label=""):
-    """ROC- и PR-кривые для детекции аномалий (как у примеров-эталонов)."""
     fpr, tpr, _ = roc_curve(labels, scores)
     auc = roc_auc_score(labels, scores)
     prec, rec, _ = precision_recall_curve(labels, scores)
@@ -280,7 +206,6 @@ def plot_roc_pr(labels, scores, roc_path, pr_path, label=""):
 
 
 def plot_per_work_error(df, path) -> dict:
-    """MAPE по каждой работе: где модель точна, а где ошибается (разбор ошибок)."""
     tr, te = split_random(df, 0.25)
     pipe = make_pipe(LinearRegression())
     pipe.fit(tr[FEATURES], np.log(tr["price"]))
@@ -304,13 +229,6 @@ def plot_per_work_error(df, path) -> dict:
 
 
 def feature_importance(final_pipe, X, y) -> dict:
-    """Permutation importance по ИСХОДНЫМ признакам (model-agnostic).
-
-    Перемешиваем по очереди каждый признак и смотрим, насколько падает
-    качество (R²). Чем сильнее падение — тем важнее признак. Работает для
-    любой модели (в т.ч. линейной) и сразу даёт важность по исходным
-    5 признакам, отвечая на вопрос 'что определяет цену?'.
-    """
     r = permutation_importance(final_pipe, X, np.log(y), n_repeats=10,
                                random_state=42, scoring="r2")
     raw = {f: max(0.0, float(v)) for f, v in zip(FEATURES, r.importances_mean)}
@@ -319,8 +237,7 @@ def feature_importance(final_pipe, X, y) -> dict:
 
 
 def plot_importance(imp: dict, path: str):
-    """График важности признаков (dataviz: величина -> гориз. бары, один цвет)."""
-    items = sorted(imp.items(), key=lambda x: x[1])  # снизу вверх по возрастанию
+    items = sorted(imp.items(), key=lambda x: x[1])
     labels = [FEAT_RUS[k] for k, _ in items]
     vals = [v * 100 for _, v in items]
     fig, ax = plt.subplots(figsize=(7, 3.6))
@@ -345,13 +262,11 @@ def main():
     results = {"data": {"rows": len(df), "works": int(df['canonical_work'].nunique()),
                         "sources": int(df['source'].nunique())}}
 
-    # --- MLflow: журнал экспериментов в sqlite (рекомендованный бэкенд) ---
     db = os.path.abspath(os.path.join(BASE, "..", "mlflow.db")).replace("\\", "/")
     mlflow.set_tracking_uri("sqlite:///" + db)
     mlflow.set_experiment("frame-smeta-price")
 
     def logged_eval(scenario, name, model, Xtr, ytr, Xte, yte):
-        """Обучить + оценить + записать запуск в MLflow."""
         with mlflow.start_run(run_name=f"{scenario}__{name}"):
             mlflow.log_param("model", name)
             mlflow.log_param("split", scenario)
@@ -362,7 +277,6 @@ def main():
             mlflow.set_tag("data", "real_price_lists")
         return m
 
-    # --- Сценарий A: случайный сплит ---
     tr, te = split_random(df)
     for name, model in [("baseline_linear", LinearRegression()),
                         ("xgboost", XGBRegressor(**XGB_PARAMS))]:
@@ -370,7 +284,6 @@ def main():
         results[f"random_split/{name}"] = m
         print(f"[random ] {name:16} MAE={m['MAE_rub']:8} руб  MAPE={m['MAPE_pct']:5}%  R2={m['R2']}")
 
-    # --- Сценарий B: отложенные компании (domain shift) ---
     tr_c, te_c, holdout = split_by_company(df)
     results["company_holdout/sources"] = holdout
     for name, model in [("baseline_linear", LinearRegression()),
@@ -383,7 +296,6 @@ def main():
     fig_dir = os.path.join(rep_dir, "figures")
     os.makedirs(fig_dir, exist_ok=True)
 
-    # --- Кросс-валидация (5 фолдов): устойчивое сравнение моделей ---
     print("\n--- 5-fold кросс-валидация (среднее ± разброс) ---")
     cv_lin = kfold_eval(df, LinearRegression)
     cv_xgb = kfold_eval(df, lambda: XGBRegressor(**XGB_PARAMS))
@@ -393,15 +305,11 @@ def main():
         print(f"  {tag:8} R2={cv['R2'][0]}±{cv['R2'][1]}  "
               f"MAPE={cv['MAPE'][0]}±{cv['MAPE'][1]}%  MAE={cv['MAE'][0]}±{cv['MAE'][1]}")
 
-    # --- Тюнинг XGBoost (12 конфигураций по CV) ---
     best_mape, best_params, cv_best = tune_xgb(df)
     results["cv/xgboost_tuned"] = {"params": best_params, "metrics": cv_best}
     print(f"  xgboost(tuned) R2={cv_best['R2'][0]}  MAPE={cv_best['MAPE'][0]}%  "
           f"(лучшие: depth={best_params['max_depth']}, n={best_params['n_estimators']}, "
           f"lr={best_params['learning_rate']})")
-    # Выбор модели по принципу простоты: XGBoost должен превзойти линейную
-    # ЗНАЧИМО (больше, чем на разброс между фолдами). Иначе — простая линейная
-    # (стабильнее, интерпретируемее, быстрее). Разница 0.8 п.п. < разброса 1.4 п.п.
     mape_lin, std_lin = cv_lin["MAPE"]
     significant = cv_best["MAPE"][0] < mape_lin - std_lin
     winner = "xgboost_tuned" if significant else "linear"
@@ -421,13 +329,11 @@ def main():
         mlflow.log_metric("cv_xgb_tuned_MAPE", cv_best["MAPE"][0])
         mlflow.log_param("chosen_model", winner)
 
-    # --- Разбор ошибок по работам ---
     per_work = plot_per_work_error(df, os.path.join(fig_dir, "08_error_by_work.png"))
     results["error_by_work"] = per_work
     print(f"\n[per-work] точнее всего: {list(per_work['easiest'])[:2]} | "
           f"сложнее всего: {list(per_work['hardest'])[:2]}")
 
-    # --- Детекция аномалий №1: РЕАЛЬНАЯ проверка (leave-one-company-out) ---
     real_an, real_labels, real_scores = loco_anomaly_eval(df)
     plot_roc_pr(real_labels, real_scores,
                 os.path.join(fig_dir, "09_anomaly_real_roc_pr.png"), None,
@@ -438,7 +344,6 @@ def main():
           f"recall={real_an['recall']}  "
           f"(реальных рыночных выбросов {real_an['n_real_anomalies']}/{real_an['n_test']})")
 
-    # --- Детекция аномалий №2: стресс-тест на реалистичной синтетике (+25..80%) ---
     syn_an, syn_labels, syn_scores = anomaly_eval(tr, te)
     _, syn_ap = plot_roc_pr(syn_labels, syn_scores,
                             os.path.join(fig_dir, "10_anomaly_synthetic_roc_pr.png"), None,
@@ -457,7 +362,6 @@ def main():
         mlflow.log_artifact(os.path.join(fig_dir, "09_anomaly_real_roc_pr.png"))
         mlflow.log_artifact(os.path.join(fig_dir, "10_anomaly_synthetic_roc_pr.png"))
 
-    # --- Финальная (продакшн) модель: линейная — победитель по CV ---
     final = make_pipe(LinearRegression())
     final.fit(df[FEATURES], np.log(df["price"]))
     q_lo = make_pipe(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
@@ -473,7 +377,6 @@ def main():
     imp_png = os.path.join(fig_dir, "07_feature_importance.png")
     plot_importance(imp, imp_png)
 
-    # Финальный запуск: логируем важность признаков и график в MLflow.
     with mlflow.start_run(run_name="final_model"):
         mlflow.log_param("model", "linear_regression")
         mlflow.log_metrics({f"importance_{k}": v for k, v in imp.items()})
