@@ -1,0 +1,22 @@
+{
+  "n_gold": 108,
+  "aspect_accuracy_on_aspectful_9class": 0.513,
+  "aspect_random_baseline": 0.111,
+  "share_clauses_without_true_aspect": 0.296,
+  "sentiment_3class": {
+    "neural": 0.63,
+    "lexicon": 0.463,
+    "majority_baseline": 0.824
+  },
+  "sentiment_polarity": {
+    "neural": 0.913,
+    "lexicon": 0.38,
+    "majority_baseline": 0.967,
+    "n_pos": 89,
+    "n_neg": 3
+  },
+  "negative_recall": {
+    "neural": 0.0,
+    "lexicon": 0.0
+  }
+}

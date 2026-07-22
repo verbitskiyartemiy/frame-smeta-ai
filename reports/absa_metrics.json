@@ -1,0 +1,12 @@
+{
+  "neural": {
+    "ROC_AUC": 0.933,
+    "F1": 0.845,
+    "accuracy": 0.735
+  },
+  "lexicon": {
+    "ROC_AUC": 0.906,
+    "F1": 0.946,
+    "accuracy": 0.897
+  }
+}

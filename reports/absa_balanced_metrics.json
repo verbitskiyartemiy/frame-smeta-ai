@@ -1,0 +1,20 @@
+{
+  "n": 528,
+  "n_pos": 264,
+  "n_neg": 264,
+  "majority_baseline_acc": 0.5,
+  "neural": {
+    "ROC_AUC": 0.962,
+    "F1_macro": 0.876,
+    "accuracy": 0.877,
+    "recall_neg": 0.803,
+    "recall_pos": 0.951
+  },
+  "lexicon": {
+    "ROC_AUC": 0.87,
+    "F1_macro": 0.782,
+    "accuracy": 0.782,
+    "recall_neg": 0.758,
+    "recall_pos": 0.807
+  }
+}

@@ -25,6 +25,12 @@ EXAMPLE = """Укладка плитки на пол; 20; 3200
 Стяжка пола; 30; 700
 Натяжной потолок; 30; 1900"""
 
+EXAMPLE_REVIEWS = """Мастер опоздал на неделю и постоянно пропадал, не отвечал на звонки. Но плитку положил идеально, качество отличное. После работы оставили кучу мусора.
+
+Отличная бригада, сделали всё в срок. Цена не изменилась от сметы, все договорённости соблюдали. Рекомендую!
+
+Качество хорошее, но смета выросла в полтора раза в процессе работы. На претензии реагировали неохотно, недочёты устраняли со скрипом."""
+
 
 def _num(x: str):
     x = re.sub(r"[^\d.,]", "", str(x)).replace(",", ".")
@@ -101,27 +107,70 @@ def analyze(text: str):
     return table, summary
 
 
+def analyze_reviews(text: str):
+    from absa import analyze_review
+    import numpy as np
+    reviews = [r.strip() for r in text.split("\n\n") if r.strip()]
+    if not reviews:
+        return pd.DataFrame(), "Вставьте отзывы (пустая строка — разделитель)."
+    agg = {}
+    for r in reviews:
+        for aspect, score in analyze_review(r).items():
+            agg.setdefault(aspect, []).append(score)
+    rows = []
+    for aspect, scores in sorted(agg.items(), key=lambda x: np.mean(x[1])):
+        m = float(np.mean(scores))
+        stars = round((m + 1) / 2 * 4 + 1, 1)
+        bar = "🟩" * round((m + 1) / 2 * 10) + "🟥" * (10 - round((m + 1) / 2 * 10))
+        rows.append([aspect, f"{stars:.1f} / 5", bar, len(scores)])
+    table = pd.DataFrame(rows, columns=["Аспект", "Оценка", "Профиль", "Упоминаний"])
+    summary = (f"### Профиль мастера по {len(reviews)} отзывам\n"
+               f"Затронуто аспектов: **{len(agg)}** из 9. "
+               f"Оценки извлечены нейросетью из текста — их не накрутить звёздами.")
+    return table, summary
+
+
 def build_app():
     import gradio as gr
     with gr.Blocks(title="FRAME · AI-анализ смет", theme=gr.themes.Soft()) as demo:
         gr.Markdown(
-            "# 🏗️ FRAME · AI-анализ смет\n"
-            "Вставьте смету подрядчика — модель сравнит каждую позицию с реальными "
-            "рыночными ценами (2108 цен, 22 компании, 7 городов) и пометит "
-            "**завышенные** позиции. _Демо фичи 5.2 платформы FRAME._"
+            "# 🏗️ FRAME · AI-модули платформы\n"
+            "_Демо ИИ-слоя FRAME: анализ смет (фича 5.2) и структурный рейтинг "
+            "мастеров по отзывам (фича 5.3)._"
         )
-        with gr.Row():
-            with gr.Column(scale=1):
-                inp = gr.Textbox(
-                    label="Смета (одна позиция в строке: Название; количество; цена/ед)",
-                    value=EXAMPLE, lines=10)
-                btn = gr.Button("🔍 Проверить смету", variant="primary")
-                gr.Markdown("Распознаётся **35 видов работ**: штукатурка, стяжка, "
-                            "плитка, обои, электрика, сантехника, потолки, двери и др.")
-            with gr.Column(scale=2):
-                out_sum = gr.Markdown()
-                out_tbl = gr.Dataframe(label="Разбор по позициям", wrap=True)
-        btn.click(analyze, inputs=inp, outputs=[out_tbl, out_sum])
+        with gr.Tab("💰 Анализ сметы"):
+            gr.Markdown(
+                "Вставьте смету подрядчика — модель сравнит каждую позицию с реальными "
+                "рыночными ценами (2108 цен, 22 компании, 7 городов) и пометит "
+                "**завышенные** позиции."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    inp = gr.Textbox(
+                        label="Смета (одна позиция в строке: Название; количество; цена/ед)",
+                        value=EXAMPLE, lines=10)
+                    btn = gr.Button("🔍 Проверить смету", variant="primary")
+                    gr.Markdown("Распознаётся **35 видов работ**: штукатурка, стяжка, "
+                                "плитка, обои, электрика, сантехника, потолки, двери и др.")
+                with gr.Column(scale=2):
+                    out_sum = gr.Markdown()
+                    out_tbl = gr.Dataframe(label="Разбор по позициям", wrap=True)
+            btn.click(analyze, inputs=inp, outputs=[out_tbl, out_sum])
+        with gr.Tab("⭐ Рейтинг мастера по отзывам"):
+            gr.Markdown(
+                "Вставьте отзывы о мастере (разделитель — пустая строка) — модель "
+                "разложит их на **9 аспектов**: сроки, качество, цена, чистота, "
+                "коммуникация, профессионализм, честность, гарантия, вежливость."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    rinp = gr.Textbox(label="Отзывы клиентов",
+                                      value=EXAMPLE_REVIEWS, lines=12)
+                    rbtn = gr.Button("⭐ Построить профиль", variant="primary")
+                with gr.Column(scale=2):
+                    rsum = gr.Markdown()
+                    rtbl = gr.Dataframe(label="Аспектный профиль", wrap=True)
+            rbtn.click(analyze_reviews, inputs=rinp, outputs=[rtbl, rsum])
         demo.load(analyze, inputs=inp, outputs=[out_tbl, out_sum])
     return demo
 

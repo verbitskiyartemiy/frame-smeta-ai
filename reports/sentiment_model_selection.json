@@ -1,0 +1,15 @@
+{
+  "cointegrated/rubert-tiny-sentiment-balanced": {
+    "acc_3class": 0.407,
+    "polarity_acc": 0.511
+  },
+  "seara/rubert-tiny2-russian-sentiment": {
+    "acc_3class": 0.546,
+    "polarity_acc": 0.707
+  },
+  "blanchefort/rubert-base-cased-sentiment": {
+    "acc_3class": 0.63,
+    "polarity_acc": 0.913
+  },
+  "best": "blanchefort/rubert-base-cased-sentiment"
+}
