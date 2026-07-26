@@ -1,5 +1,7 @@
 # FRAME · AI-анализ смет на ремонт
 
+[![tests](https://github.com/verbitskiyartemiy/frame-smeta-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/verbitskiyartemiy/frame-smeta-ai/actions/workflows/tests.yml)
+
 ---
 
 ## Проблема

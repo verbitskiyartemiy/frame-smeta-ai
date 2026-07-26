@@ -1,0 +1,483 @@
+<title>FRAME · как устроен твой ML-проект</title>
+<style>
+  :root {
+    --paper:#f4f6f9; --card:#ffffff; --card2:#f9fafc;
+    --ink:#1b202a; --ink-soft:#57616f; --ink-faint:#8a95a4;
+    --line:#e3e7ee; --line-strong:#cfd6e0;
+    --accent:#2f6db0;      /* сталь — модуль 1 (цены) */
+    --accent2:#c65b2f;     /* охра — модуль 2 (отзывы) */
+    --good:#2e9e6b; --warn:#c07a1e; --bad:#c0472f;
+    --mono-bg:#eef1f6; --mono-ink:#324055;
+    --shadow:0 1px 2px rgba(20,30,50,.05), 0 6px 20px rgba(20,30,50,.04);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:#0e1218; --card:#161b24; --card2:#12171f;
+      --ink:#e7ebf2; --ink-soft:#9aa4b3; --ink-faint:#6b7686;
+      --line:#232b37; --line-strong:#313b4a;
+      --accent:#5b9bd8; --accent2:#e08a5f;
+      --good:#4bbd88; --warn:#d69a3f; --bad:#df6a52;
+      --mono-bg:#1c2430; --mono-ink:#b7c2d2;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0e1218; --card:#161b24; --card2:#12171f;
+    --ink:#e7ebf2; --ink-soft:#9aa4b3; --ink-faint:#6b7686;
+    --line:#232b37; --line-strong:#313b4a;
+    --accent:#5b9bd8; --accent2:#e08a5f;
+    --good:#4bbd88; --warn:#d69a3f; --bad:#df6a52;
+    --mono-bg:#1c2430; --mono-ink:#b7c2d2;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+  :root[data-theme="light"] {
+    --paper:#f4f6f9; --card:#ffffff; --card2:#f9fafc;
+    --ink:#1b202a; --ink-soft:#57616f; --ink-faint:#8a95a4;
+    --line:#e3e7ee; --line-strong:#cfd6e0;
+    --accent:#2f6db0; --accent2:#c65b2f;
+    --good:#2e9e6b; --warn:#c07a1e; --bad:#c0472f;
+    --mono-bg:#eef1f6; --mono-ink:#324055;
+    --shadow:0 1px 2px rgba(20,30,50,.05), 0 6px 20px rgba(20,30,50,.04);
+  }
+
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.62;
+    font-size:16.5px; -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} }
+
+  .wrap {
+    display:grid; grid-template-columns:230px minmax(0,748px);
+    gap:52px; justify-content:center;
+    max-width:1080px; margin:0 auto; padding:0 28px 120px;
+  }
+  @media (max-width:900px){ .wrap{ grid-template-columns:1fr; gap:0; } }
+
+  /* ---- header ---- */
+  header.top {
+    grid-column:1/-1; padding:64px 0 40px; border-bottom:1px solid var(--line);
+    margin-bottom:44px;
+  }
+  .eyebrow {
+    font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--accent); font-weight:600;
+  }
+  h1 {
+    font-size:clamp(30px,5vw,44px); line-height:1.1; margin:14px 0 12px;
+    letter-spacing:-.02em; text-wrap:balance; font-weight:750;
+  }
+  .lede { font-size:18px; color:var(--ink-soft); max-width:60ch; margin:0; }
+  .meta-row {
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:22px;
+  }
+  .chip {
+    font-family:var(--mono); font-size:12.5px; color:var(--ink-soft);
+    background:var(--card); border:1px solid var(--line); border-radius:999px;
+    padding:5px 12px;
+  }
+
+  /* ---- TOC ---- */
+  nav.toc { align-self:start; position:sticky; top:24px; }
+  @media (max-width:900px){
+    nav.toc{ position:static; margin-bottom:40px; padding:20px;
+      background:var(--card); border:1px solid var(--line); border-radius:14px; }
+  }
+  nav.toc .ttl {
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-faint); margin-bottom:12px;
+  }
+  nav.toc ol { list-style:none; margin:0; padding:0; counter-reset:t; }
+  nav.toc li { counter-increment:t; margin:2px 0; }
+  nav.toc a {
+    display:flex; gap:10px; align-items:baseline; text-decoration:none;
+    color:var(--ink-soft); font-size:14px; padding:5px 8px; border-radius:8px;
+    border-left:2px solid transparent; transition:color .15s, background .15s;
+  }
+  nav.toc a::before {
+    content:counter(t,decimal-leading-zero); font-family:var(--mono);
+    font-size:11px; color:var(--accent); font-weight:600; flex:none;
+  }
+  nav.toc a:hover { color:var(--ink); background:var(--card2); }
+
+  /* ---- content ---- */
+  main { min-width:0; }
+  section { margin-bottom:56px; scroll-margin-top:24px; }
+  h2 {
+    font-size:26px; letter-spacing:-.01em; margin:0 0 6px; font-weight:720;
+    display:flex; align-items:baseline; gap:12px; text-wrap:balance;
+  }
+  h2 .num {
+    font-family:var(--mono); font-size:14px; color:var(--accent);
+    font-weight:600; flex:none;
+  }
+  h2.m2 .num { color:var(--accent2); }
+  h3 { font-size:18px; margin:30px 0 8px; font-weight:680; letter-spacing:-.01em; }
+  p { margin:12px 0; }
+  .sub { color:var(--ink-soft); margin-top:0; }
+  strong { font-weight:660; }
+  a.inline { color:var(--accent); text-decoration:none; border-bottom:1px solid var(--line-strong); }
+
+  code, .mono {
+    font-family:var(--mono); font-size:.88em; background:var(--mono-bg);
+    color:var(--mono-ink); padding:2px 6px; border-radius:5px;
+  }
+
+  /* flow of a module */
+  .flow { display:flex; flex-wrap:wrap; align-items:stretch; gap:8px; margin:22px 0; }
+  .flow .step {
+    flex:1 1 120px; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:12px 14px; box-shadow:var(--shadow); min-width:0;
+  }
+  .flow .step .k { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:.05em; }
+  .m2 .flow .step .k { color:var(--accent2); }
+  .flow .step .v { font-size:14px; margin-top:3px; }
+  .flow .arrow { align-self:center; color:var(--ink-faint); font-size:20px; flex:none; }
+  @media (max-width:560px){ .flow .arrow{ transform:rotate(90deg); } }
+
+  /* metric cards */
+  .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:22px 0; }
+  .metric {
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .metric .name { font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.03em; }
+  .metric .val { font-size:26px; font-weight:720; margin:4px 0 2px; font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em; color:var(--accent); }
+  .m2 .metric .val { color:var(--accent2); }
+  .metric .val.good { color:var(--good); }
+  .metric .val.warn { color:var(--warn); }
+  .metric .desc { font-size:13px; color:var(--ink-soft); line-height:1.45; }
+
+  /* callouts */
+  .callout {
+    border-radius:12px; padding:16px 18px; margin:20px 0; font-size:15px;
+    border:1px solid var(--line); background:var(--card);
+    display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start;
+  }
+  .callout .ic {
+    width:30px; height:30px; border-radius:8px; display:grid; place-items:center;
+    font-size:16px; flex:none;
+  }
+  .callout .body { min-width:0; }
+  .callout .tag {
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    font-weight:600; display:block; margin-bottom:3px;
+  }
+  .callout p { margin:4px 0 0; }
+  .callout.speak { border-left:3px solid var(--good); }
+  .callout.speak .ic { background:color-mix(in srgb, var(--good) 15%, transparent); }
+  .callout.speak .tag { color:var(--good); }
+  .callout.honest { border-left:3px solid var(--warn); }
+  .callout.honest .ic { background:color-mix(in srgb, var(--warn) 16%, transparent); }
+  .callout.honest .tag { color:var(--warn); }
+  .callout.why { border-left:3px solid var(--accent); }
+  .callout.why .ic { background:color-mix(in srgb, var(--accent) 15%, transparent); }
+  .callout.why .tag { color:var(--accent); }
+
+  /* table */
+  .twrap { overflow-x:auto; margin:20px 0; border:1px solid var(--line); border-radius:12px; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-faint); font-weight:600; background:var(--card2); }
+  tbody tr:last-child td { border-bottom:none; }
+  td code { white-space:nowrap; }
+
+  /* glossary */
+  .gloss { display:grid; gap:2px; }
+  .gitem { padding:16px 0; border-bottom:1px solid var(--line); }
+  .gitem:last-child { border-bottom:none; }
+  .gitem .term { font-weight:680; font-size:16px; }
+  .gitem .term .en { font-family:var(--mono); font-size:12px; color:var(--ink-faint); font-weight:500; margin-left:8px; }
+  .gitem p { margin:6px 0 0; color:var(--ink-soft); font-size:15px; }
+  .gitem .ours { color:var(--ink); }
+
+  .big-idea {
+    background:var(--card); border:1px solid var(--line-strong); border-radius:16px;
+    padding:26px 28px; box-shadow:var(--shadow); margin-top:4px;
+  }
+  .big-idea .split { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:18px; }
+  @media (max-width:560px){ .big-idea .split{ grid-template-columns:1fr; } }
+  .big-idea .half { padding:16px; border-radius:12px; background:var(--card2); border:1px solid var(--line); }
+  .big-idea .half .h { font-weight:700; margin-bottom:4px; }
+  .big-idea .half.a .h { color:var(--accent); }
+  .big-idea .half.b .h { color:var(--accent2); }
+  .big-idea .verdict { font-size:13px; font-family:var(--mono); margin-top:10px; color:var(--ink-soft); }
+
+  hr.soft { border:none; border-top:1px solid var(--line); margin:34px 0; }
+  .footnote { font-size:13.5px; color:var(--ink-faint); }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">FRAME · Junior ML Contest 2026</div>
+    <h1>Как устроен твой проект — от данных до защиты</h1>
+    <p class="lede">Разбор простыми словами: что за задачи мы решаем, откуда данные, как работают обе модели, что означает каждая цифра и что говорить, если спросят. Читай сверху вниз — к концу будешь понимать проект целиком.</p>
+    <div class="meta-row">
+      <span class="chip">2 ML-модуля</span>
+      <span class="chip">данные собраны вручную</span>
+      <span class="chip">без формул — на пальцах</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Оглавление">
+    <div class="ttl">Разделы</div>
+    <ol>
+      <li><a href="#idea">Главная мысль проекта</a></li>
+      <li><a href="#map">Карта: где что лежит</a></li>
+      <li><a href="#mod1">Модуль 1 — анализ сметы</a></li>
+      <li><a href="#mod2">Модуль 2 — рейтинг по отзывам</a></li>
+      <li><a href="#gloss">Словарь: каждый термин</a></li>
+      <li><a href="#defend">Если эксперт спросит</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- 1. BIG IDEA -->
+    <section id="idea">
+      <h2><span class="num">01</span>Главная мысль проекта</h2>
+      <p class="sub">Если из всего разбора ты запомнишь один абзац — пусть это будет он.</p>
+      <p>FRAME — платформа управления ремонтом. Внутри неё есть <strong>ИИ-слой</strong> (продаётся по подписке). Для конкурса я взял из него две ИИ-функции и довёл до рабочего состояния на данных, которые <strong>собрал сам</strong>. Обе решают разные задачи и дали <strong>противоположный, но одинаково честный результат.</strong></p>
+
+      <div class="big-idea">
+        <p style="margin:0; font-size:17px;">Один и тот же вопрос — «нужна ли здесь сложная модель (нейросеть), или хватит простой?» — я задал в двух местах и <strong>ответил экспериментом</strong>, а не на глаз:</p>
+        <div class="split">
+          <div class="half a">
+            <div class="h">На ценах (сметы) — не нужна</div>
+            <p style="margin:6px 0 0; font-size:14.5px;">Простая линейная модель работает не хуже навороченного бустинга. Данные бедные (короткие категории), сложной модели негде развернуться.</p>
+            <div class="verdict">linear R² 0.74 ≈ XGBoost 0.72 → взял простую</div>
+          </div>
+          <div class="half b">
+            <div class="h">На отзывах (текст) — нужна</div>
+            <p style="margin:6px 0 0; font-size:14.5px;">Здесь нейросеть-трансформер заметно бьёт простые методы. В тексте много смысла, и только модель, понимающая язык, его достаёт.</p>
+            <div class="verdict">трансформер ROC-AUC 0.96 ≫ baseline 0.50</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout speak">
+        <div class="ic">🗣️</div>
+        <div class="body">
+          <span class="tag">Это твой главный козырь на защите</span>
+          <p>«Я применяю нейросеть <strong>там, где данные дают сигнал, а не ради галочки</strong> в ML-конкурсе. И то, и другое я доказал измерением, а не словами.» Эксперты в гайде прямо ценят это: обоснованный выбор модели и сравнение с baseline — признак зрелости, а не количество модных технологий.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. MAP -->
+    <section id="map">
+      <h2><span class="num">02</span>Карта: где что лежит</h2>
+      <p class="sub">Репозиторий <code>frame-smeta-ai</code>. Если откроют код и спросят «а где вот это?» — вот ответ.</p>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Файл</th><th>Что делает</th><th>Простыми словами</th></tr></thead>
+          <tbody>
+            <tr><td><code>src/collect_real_prices.py</code></td><td>Скрапер прайс-листов</td><td>Робот, который ходит по сайтам ремонтных фирм и собирает цены. Собрал 6391 цену с 24 сайтов, 7 городов.</td></tr>
+            <tr><td><code>src/clean_prices.py</code></td><td>Чистка и канонизация</td><td>Приводит «Укладка плитки на пол» и «Плитка напольная» к одному названию. После чистки осталось 2108 «чистых» цен.</td></tr>
+            <tr><td><code>src/train_model.py</code></td><td>Обучение модели цены + аномалии</td><td>Сердце модуля 1: учит модель справедливой цены, сравнивает linear и XGBoost, ищет завышения, рисует графики.</td></tr>
+            <tr><td><code>src/collect_reviews.py</code><br><code>src/collect_otzyvru.py</code></td><td>Скраперы отзывов</td><td>Собирают отзывы о мастерах: 639 с yell.ru + 573 с otzyvru.</td></tr>
+            <tr><td><code>src/absa.py</code></td><td>Разбор отзыва на аспекты</td><td>Сердце модуля 2: режет отзыв на фразы, определяет о чём фраза (сроки/цена/…) и её тональность нейросетью.</td></tr>
+            <tr><td><code>src/eval_*.py</code></td><td>Проверки качества</td><td>Отдельные скрипты, которые честно замеряют, насколько хорошо всё работает.</td></tr>
+            <tr><td><code>src/demo_app.py</code></td><td>Демо (Gradio)</td><td>Кнопочный интерфейс: вставляешь смету или отзывы — видишь результат. То, что покажем жюри.</td></tr>
+            <tr><td><code>reports/figures/</code></td><td>Графики</td><td>Все картинки: гистограммы цен, важность признаков, ROC-кривые. Идут в презентацию.</td></tr>
+            <tr><td><code>tests/</code></td><td>Юнит-тесты</td><td>Автопроверки, что код не сломался. Показывают инженерную аккуратность (критерий 1).</td></tr>
+            <tr><td><code>Dockerfile</code>, <code>mlflow.db</code></td><td>Упаковка и журнал</td><td>Docker — «коробка», в которой проект запустится где угодно. MLflow — журнал всех экспериментов.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. MODULE 1 -->
+    <section id="mod1">
+      <h2 class="m1"><span class="num">03</span>Модуль 1 — анализ сметы</h2>
+      <p class="sub">Задача: заказчик вставляет смету подрядчика, модель говорит, где переплата.</p>
+
+      <p><strong>Проблема, которую решаем.</strong> Человек в ремонте не знает рыночных цен. Подрядчик пишет «штукатурка — 800 ₽/м²», а заказчик не понимает, это норма или грабёж. Модель сравнивает каждую строку сметы с реальным рынком.</p>
+
+      <h3>Как это работает — 4 шага</h3>
+      <div class="flow">
+        <div class="step"><div class="k">ШАГ 1 · данные</div><div class="v">Скрапер собрал <strong>6391 цену</strong> с прайсов реальных фирм</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 2 · чистка</div><div class="v">Свёл названия к <strong>35 работам</strong>, убрал мусор → <strong>2108 цен</strong></div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 3 · модель</div><div class="v">Учит <strong>справедливую цену</strong> каждой работы</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 4 · аномалии</div><div class="v">Помечает строки, что <strong>сильно выбились</strong> из рынка</div></div>
+      </div>
+
+      <h3>Шаг 3: почему линейная модель, а не нейросеть</h3>
+      <p>Я честно проверил обе. Сравнил простую <strong>линейную регрессию</strong> и мощный <strong>градиентный бустинг (XGBoost)</strong> на <strong>кросс-валидации</strong> (проверка на 5 разных кусках данных, чтобы не быть везением).</p>
+      <div class="metrics">
+        <div class="metric"><div class="name">R² линейная</div><div class="val">0.74</div><div class="desc">Модель объясняет ~74% разброса цен</div></div>
+        <div class="metric"><div class="name">R² XGBoost</div><div class="val">0.72</div><div class="desc">Сложная модель — не лучше</div></div>
+        <div class="metric"><div class="name">Разница</div><div class="val warn">незначима</div><div class="desc">Меньше разброса между кусками данных</div></div>
+      </div>
+      <div class="callout why">
+        <div class="ic">💡</div>
+        <div class="body">
+          <span class="tag">Почему так вышло</span>
+          <p>Признаки у цены простые и категориальные: вид работы, город, единица измерения, компания. Никакой хитрой структуры внутри нет — а бустинг силён именно на сложных нелинейных зависимостях. Тут ему негде себя показать. <strong>Взял простую модель — она точнее, стабильнее и понятнее.</strong> Это не слабость, а правильное инженерное решение.</p>
+        </div>
+      </div>
+
+      <h3>Шаг 4: как ловим завышения и как это проверено</h3>
+      <p>Для каждой работы я строю <strong>коридор нормальных цен</strong> — от P10 до P90 (дешевле только 10% рынка … дороже только 10% рынка). Цена вне коридора — подозрительная. Но как убедиться, что модель ловит <em>реальные</em> завышения, а не подсмотрела ответ? Двумя проверками:</p>
+      <div class="metrics">
+        <div class="metric"><div class="name">РЕАЛЬНАЯ (LOCO)</div><div class="val good">0.87</div><div class="desc">ROC-AUC. Прячу все цены одной фирмы, учусь на остальных, ловлю её реальные выбросы. И так по всем 22 фирмам.</div></div>
+        <div class="metric"><div class="name">Точность (precision)</div><div class="val good">0.74</div><div class="desc">Из помеченных «завышено» три из четырёх — реально завышены</div></div>
+        <div class="metric"><div class="name">Стресс-тест</div><div class="val warn">0.57</div><div class="desc">Синтетические накрутки +25…80%. Тут виден предел.</div></div>
+      </div>
+      <div class="callout honest">
+        <div class="ic">⚖️</div>
+        <div class="body">
+          <span class="tag">Честное ограничение — назови его сам, до эксперта</span>
+          <p>Стресс-тест 0.57 — низкий <em>намеренно</em>. Умеренные накрутки (+25%) прячутся внутри обычного рыночного разброса цен, и никакая модель на одних ценах их не поймает. Грубые завышения ловятся хорошо (0.87), тонкие — нет. <strong>Я это ограничение не скрываю, а показываю — и объясняю, что реальные объёмы работ (которые появятся на платформе) снимут его.</strong> Эксперты ценят, когда сам называешь слабое место.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. MODULE 2 -->
+    <section id="mod2">
+      <h2 class="m2"><span class="num">04</span>Модуль 2 — рейтинг мастера по отзывам</h2>
+      <p class="sub">Задача: вместо одной звезды — честный профиль мастера по 9 аспектам, который трудно накрутить.</p>
+
+      <p><strong>Проблема.</strong> «4.8 звезды» ни о чём не говорит: мастер может делать идеально, но срывать сроки. И звёзды легко накручивают. Модель читает <strong>текст</strong> отзывов и раскладывает мастера на 9 сторон: сроки, качество, цена, чистота, коммуникация, профессионализм, честность, гарантия, вежливость.</p>
+
+      <h3>Как это работает — 4 шага</h3>
+      <div class="m2">
+      <div class="flow">
+        <div class="step"><div class="k">ШАГ 1 · режем</div><div class="v">Отзыв → отдельные <strong>фразы</strong> («опоздал», «но плитку положил идеально»)</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 2 · о чём</div><div class="v">Каждую фразу относим к <strong>аспекту</strong> (сроки? цена?) через эмбеддинги</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 3 · тон</div><div class="v"><strong>Нейросеть</strong> оценивает: хвалят или ругают</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><div class="k">ШАГ 4 · профиль</div><div class="v">Собираем оценки по каждому из <strong>9 аспектов</strong></div></div>
+      </div>
+      </div>
+
+      <h3>Данные: почему пришлось собирать дважды</h3>
+      <p>Сначала я собрал 639 отзывов с yell.ru — но там <strong>98% пятёрок</strong> (люди пишут, когда довольны). На таких данных модель нечему учить: она может тупо всегда говорить «хорошо» и быть права в 98% случаев. Поэтому я добрал <strong>573 отзыва с otzyvru</strong> (туда приходят жаловаться, средний балл 2.6) и получил <strong>сбалансированный набор</strong>: 264 позитива против 264 негатива.</p>
+      <div class="callout why">
+        <div class="ic">💡</div>
+        <div class="body">
+          <span class="tag">Зачем баланс — это важный DS-момент</span>
+          <p>На сбалансированном наборе тупой «всегда позитив» даёт ровно <strong>50%</strong> — вот честный baseline. Теперь если модель его бьёт, это реальное умение, а не перекос данных. Именно поэтому я специально искал негативные отзывы.</p>
+        </div>
+      </div>
+
+      <h3>Шаг 3: выбор нейросети и результат</h3>
+      <p>Тональность достаёт готовый русскоязычный <strong>трансформер</strong> (<code>rubert-base-cased-sentiment</code>). Я выбирал его из трёх кандидатов на <strong>108 фразах, размеченных руками</strong>. Дальше сравнил с двумя baseline: «словарь плохих/хороших слов» и «всегда позитив».</p>
+      <div class="m2">
+      <div class="metrics">
+        <div class="metric"><div class="name">Трансформер ROC-AUC</div><div class="val">0.96</div><div class="desc">Отлично отличает похвалу от жалобы</div></div>
+        <div class="metric"><div class="name">F1</div><div class="val">0.88</div><div class="desc">Баланс точности и полноты</div></div>
+        <div class="metric"><div class="name">Поймал негатива</div><div class="val">80%</div><div class="desc">против 87% у словаря, но…</div></div>
+        <div class="metric"><div class="name">Baseline «всегда +»</div><div class="val warn">50%</div><div class="desc">Планка, которую нужно бить</div></div>
+      </div>
+      </div>
+      <p class="footnote">На тексте, в отличие от цен, сложная модель работает <strong>заметно</strong> лучше простой — это зеркальное отражение вывода из модуля 1.</p>
+
+      <div class="callout honest">
+        <div class="ic">⚖️</div>
+        <div class="body">
+          <span class="tag">Честное ограничение</span>
+          <p>Слабое место модуля — <strong>шаг 2</strong>, привязка фразы к нужному аспекту через эмбеддинги (точность 0.51 на 9 классах). Тональность модель берёт отлично, а вот «эта фраза про сроки или про качество?» иногда путает. Это следующая точка роста, и я честно её называю.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. GLOSSARY -->
+    <section id="gloss">
+      <h2><span class="num">05</span>Словарь: каждый термин на пальцах</h2>
+      <p class="sub">Всё, что может прозвучать. Прочти пару раз — этого хватит, чтобы не поплыть на вопросе.</p>
+      <div class="gloss">
+
+        <div class="gitem"><div class="term">Baseline <span class="en">базовое решение</span></div>
+          <p>Самое тупое решение, с которым сравниваешь. Если умная модель его не бьёт — она не нужна. У нас два: «всегда предсказывай среднюю цену» и «всегда говори, что отзыв позитивный» (50%). <span class="ours">Смысл всего проекта — показать, где модель baseline бьёт, а где нет.</span></p></div>
+
+        <div class="gitem"><div class="term">R² <span class="en">R-квадрат</span></div>
+          <p>Насколько хорошо модель угадывает цену. <strong>1.0</strong> — идеально, <strong>0</strong> — не лучше, чем назвать среднюю. <span class="ours">У нас 0.74 → модель объясняет ~74% того, почему цены разные.</span></p></div>
+
+        <div class="gitem"><div class="term">MAE / MAPE <span class="en">средняя ошибка</span></div>
+          <p>Насколько модель промахивается: <strong>MAE</strong> — в рублях, <strong>MAPE</strong> — в процентах. Меньше — лучше.</p></div>
+
+        <div class="gitem"><div class="term">Кросс-валидация <span class="en">CV, 5-fold</span></div>
+          <p>Проверка не на одном случайном куске данных, а на пяти по очереди — чтобы хороший результат не оказался везением. <span class="ours">Именно так я сравнил linear и XGBoost честно.</span></p></div>
+
+        <div class="gitem"><div class="term">LOCO <span class="en">leave-one-company-out</span></div>
+          <p>Прячем все цены одной компании, учим модель на остальных, проверяем на спрятанной. И так по всем 22 фирмам. <span class="ours">Так я доказал, что детекция завышений ловит реальный рынок, а не подсмотрела ответ (ROC-AUC 0.87).</span></p></div>
+
+        <div class="gitem"><div class="term">Коридор P10–P90 <span class="en">квантили</span></div>
+          <p>Диапазон нормальных цен на работу. <strong>P10</strong> — дешевле только 10% рынка, <strong>P90</strong> — дороже только 10%. Всё за пределами — флаг «подозрительно».</p></div>
+
+        <div class="gitem"><div class="term">ROC-AUC <span class="en">качество различения</span></div>
+          <p>Насколько хорошо модель отличает «завышено» от «нормально» (или «жалоба» от «похвалы»). <strong>0.5</strong> — как монетка, <strong>1.0</strong> — идеально. <span class="ours">0.87 — хорошо, 0.96 — очень хорошо, 0.57 — почти монетка (наш стресс-тест, и это ожидаемо).</span></p></div>
+
+        <div class="gitem"><div class="term">Precision / Recall <span class="en">точность / полнота</span></div>
+          <p><strong>Precision</strong>: из помеченных «завышено» сколько реально завышены (мало ложных тревог). <strong>Recall</strong>: из всех реально завышенных скольких поймали (мало пропусков).</p></div>
+
+        <div class="gitem"><div class="term">F1 <span class="en">одно число вместо двух</span></div>
+          <p>Объединяет precision и recall в одну оценку. Удобно сравнивать модели. <span class="ours">У трансформера 0.88.</span></p></div>
+
+        <div class="gitem"><div class="term">Линейная регрессия vs XGBoost <span class="en">простая vs сложная</span></div>
+          <p><strong>Линейная</strong> — простая модель, складывает вклады признаков. <strong>XGBoost (бустинг)</strong> — мощная, ловит сложные нелинейные зависимости. <span class="ours">На наших ценах они равны → выбрал простую.</span></p></div>
+
+        <div class="gitem"><div class="term">Лог-цена <span class="en">логарифм</span></div>
+          <p>Учим модель на логарифме цены, а не на самой цене. Так работа за 300 ₽ и за 3000 ₽ считаются «по-честному» в процентах, а не в рублях — иначе дорогие работы перетянули бы всё внимание модели.</p></div>
+
+        <div class="gitem"><div class="term">One-hot <span class="en">кодирование категорий</span></div>
+          <p>Способ скормить модели текстовые категории («штукатурка», «Казань») в виде чисел, потому что модель понимает только числа.</p></div>
+
+        <div class="gitem"><div class="term">Эмбеддинги <span class="en">embeddings</span></div>
+          <p>Превращение фразы в набор чисел так, что похожие по смыслу фразы оказываются рядом. <span class="ours">Так модуль 2 понимает, что «затянули сроки» и «опоздал на неделю» — про одно и то же.</span></p></div>
+
+        <div class="gitem"><div class="term">Трансформер <span class="en">transformer, rubert</span></div>
+          <p>Тип нейросети, понимающий язык с учётом контекста. Мы не обучали свою с нуля — взяли готовую, натренированную на русском, и применили. <span class="ours">Это и есть «применение foundation-модели», которое ценит гайд.</span></p></div>
+
+        <div class="gitem"><div class="term">ABSA <span class="en">аспектная тональность</span></div>
+          <p>Анализ отзыва <strong>по сторонам</strong>, а не в целом: не «отзыв хороший», а отдельно сроки, цена, качество… Суть модуля 2.</p></div>
+
+        <div class="gitem"><div class="term">MLflow / Docker / юнит-тесты <span class="en">инженерия</span></div>
+          <p><strong>MLflow</strong> — журнал всех экспериментов (что с чем сравнивал). <strong>Docker</strong> — «коробка», где проект запустится на любом компьютере. <strong>Тесты</strong> — автопроверки, что код не сломался. Всё это — критерий «инженерия».</p></div>
+
+      </div>
+    </section>
+
+    <!-- 6. DEFENSE -->
+    <section id="defend">
+      <h2><span class="num">06</span>Если эксперт спросит</h2>
+      <p class="sub">Короткие честные ответы на самые вероятные вопросы. Полную шпаргалку с тренировкой сделаем отдельно — это разминка.</p>
+
+      <div class="twrap">
+        <table>
+          <thead><tr><th style="width:38%">Вопрос</th><th>Как отвечать</th></tr></thead>
+          <tbody>
+            <tr><td>«А это вообще ML?»</td><td>Да: обучаемые модели, валидация на отложенных данных, метрики, сравнение с baseline, применение foundation-трансформера. И главное — я показал <strong>измерением</strong>, где ML нужен, а где нет.</td></tr>
+            <tr><td>«Почему не нейросеть на ценах?»</td><td>Проверял на кросс-валидации: XGBoost (0.72) не бьёт линейную (0.74). Признаки простые категориальные — бустингу негде развернуться. Взял простую: точнее, стабильнее, понятнее.</td></tr>
+            <tr><td>«Откуда данные?»</td><td>Собрал сам скраперами: 6391 цена с 24 прайсов + 1212 отзывов с двух площадок. Публичные данные закрывают холодный старт — продукт полезен с первого дня.</td></tr>
+            <tr><td>«Где слабое место?»</td><td>Два, и я их не прячу: умеренные завышения тонут в рыночном разбросе (стресс 0.57); привязка фраз к аспектам через эмбеддинги пока слабая (0.51). Оба — понятные точки роста.</td></tr>
+            <tr><td>«Что дальше?»</td><td>Реальные данные с платформы: объёмы работ, исходы проектов, фотоотчёты. На них откроется то, чего нет в открытом доступе — проверка объёмов, прогноз перерасхода, дефекты по фото. В этом защита продукта.</td></tr>
+            <tr><td>«Роль ИИ в разработке?»</td><td>Собирал проект с AI-агентом как инструментом: планирование, скрапинг, эксперименты, критический разбор гипотез. Один разбор закончился отказом от эмбеддингов, когда проверка показала, что regex точнее — то есть ИИ не «писал за меня», а помогал проверять.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout speak">
+        <div class="ic">🎯</div>
+        <div class="body">
+          <span class="tag">Установка на защиту</span>
+          <p>Ты не обязан знать ML как инженер с пятилетним стажем — ты <strong>джуниор, который поступает учиться</strong>. От тебя ждут: понимаешь свой проект, честно называешь ограничения, обосновываешь решения. Всё это у тебя есть. Спокойно веди по логике «проблема → данные → две модели → честный вывод», и этого достаточно.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
