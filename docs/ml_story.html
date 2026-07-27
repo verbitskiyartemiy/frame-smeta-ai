@@ -1,0 +1,367 @@
+<title>FRAME · как рассказывать ML-часть</title>
+<style>
+  :root{
+    --paper:#fafaf9; --card:#fff; --sunk:#f1f2f0; --band:#eceeeb;
+    --ink:#15171a; --soft:#545a60; --faint:#888f96;
+    --line:#e3e5e2; --strong:#c6cac6;
+    --key:#1b5490; --warm:#a8450f; --ok:#1d7a4c;
+    --mono:ui-monospace,"Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#101214;--card:#181b1e;--sunk:#14171a;--band:#1d2125;
+      --ink:#e8ebee;--soft:#a0a7ad;--faint:#747b82;
+      --line:#252a2e;--strong:#363c41;
+      --key:#69a5e6;--warm:#e08355;--ok:#4bb682;}
+  }
+  :root[data-theme="dark"]{--paper:#101214;--card:#181b1e;--sunk:#14171a;--band:#1d2125;
+    --ink:#e8ebee;--soft:#a0a7ad;--faint:#747b82;
+    --line:#252a2e;--strong:#363c41;
+    --key:#69a5e6;--warm:#e08355;--ok:#4bb682;}
+  :root[data-theme="light"]{--paper:#fafaf9;--card:#fff;--sunk:#f1f2f0;--band:#eceeeb;
+    --ink:#15171a;--soft:#545a60;--faint:#888f96;
+    --line:#e3e5e2;--strong:#c6cac6;
+    --key:#1b5490;--warm:#a8450f;--ok:#1d7a4c;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    font-size:16.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .w{max-width:780px;margin:0 auto;padding:0 22px 110px}
+
+  header{padding:46px 0 24px;border-bottom:2px solid var(--ink);margin-bottom:8px}
+  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--warm);font-weight:700}
+  h1{font-size:clamp(27px,5.5vw,38px);margin:10px 0 8px;line-height:1.1;
+    letter-spacing:-.02em;font-weight:780}
+  .lede{color:var(--soft);margin:0;font-size:16.5px}
+
+  h2{font-size:14px;font-family:var(--mono);text-transform:uppercase;
+    letter-spacing:.13em;color:var(--faint);font-weight:700;
+    margin:46px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h3{font-size:19px;margin:0 0 4px;font-weight:710;letter-spacing:-.01em}
+  p{margin:10px 0}
+  strong{font-weight:670}
+  code{font-family:var(--mono);font-size:.86em;background:var(--sunk);
+    padding:2px 6px;border-radius:4px}
+
+  /* slide block */
+  .slide{background:var(--card);border:1px solid var(--strong);border-radius:12px;
+    margin:22px 0;overflow:hidden}
+  .slide > .head{display:flex;gap:12px;align-items:baseline;padding:14px 18px;
+    background:var(--band);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .slide > .head .n{font-family:var(--mono);font-size:12px;font-weight:700;
+    color:var(--paper);background:var(--key);border-radius:6px;padding:3px 8px;
+    flex:none}
+  .slide > .head .sec{margin-left:auto;font-family:var(--mono);font-size:12px;
+    color:var(--soft);white-space:nowrap}
+  .slide > .body{padding:16px 18px}
+  .slide > .body > *:first-child{margin-top:0}
+  .slide > .body > *:last-child{margin-bottom:0}
+
+  .row{margin:14px 0}
+  .row .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;
+    text-transform:uppercase;font-weight:700;margin-bottom:5px}
+  .lbl.show{color:var(--key)}
+  .lbl.say{color:var(--ok)}
+  .lbl.ask{color:var(--warm)}
+
+  .say-box{background:var(--sunk);border-left:3px solid var(--ok);
+    border-radius:0 8px 8px 0;padding:12px 15px;font-size:16px}
+  .say-box p{margin:8px 0}
+  .say-box p:first-child{margin-top:0}
+  .say-box p:last-child{margin-bottom:0}
+
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:5px 0}
+  ul.plain{list-style:none;padding-left:0}
+  ul.plain li{padding-left:18px;position:relative}
+  ul.plain li::before{content:"▸";position:absolute;left:0;color:var(--key)}
+
+  .fig{font-family:var(--mono);font-size:12.5px;color:var(--key);
+    background:var(--sunk);border-radius:6px;padding:3px 8px;display:inline-block}
+
+  .depth{border:1px solid var(--line);border-radius:10px;margin:14px 0;
+    overflow:hidden}
+  .depth .lvl{display:grid;grid-template-columns:88px 1fr;gap:14px;
+    padding:11px 14px;border-bottom:1px solid var(--line);font-size:15px}
+  .depth .lvl:last-child{border-bottom:none}
+  .depth .lvl:nth-child(odd){background:var(--sunk)}
+  .depth .lvl b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--faint);padding-top:2px}
+
+  .warn{background:var(--card);border:1px solid var(--strong);
+    border-left:4px solid var(--warm);border-radius:0 10px 10px 0;
+    padding:14px 17px;margin:18px 0}
+  .warn .h{font-family:var(--mono);font-size:11px;letter-spacing:.11em;
+    text-transform:uppercase;color:var(--warm);font-weight:700;margin-bottom:5px}
+  .warn p{margin:6px 0;font-size:15.5px}
+  .warn p:last-child{margin-bottom:0}
+
+  .twrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);
+    vertical-align:top}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--faint);font-weight:700;background:var(--sunk)}
+  tbody tr:last-child td{border-bottom:none}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .never{color:var(--warm);font-weight:670}
+  .good{color:var(--ok);font-weight:670}
+</style>
+
+<div class="w">
+
+<header>
+  <div class="kick">FRAME · защита 28 июля · ML-часть</div>
+  <h1>Как рассказывать ML: слайд за слайдом</h1>
+  <p class="lede">Шесть слайдов ML-части. Для каждого: что на экране, что говоришь вслух, сколько это занимает и какой вопрос ждать. Плюс три уровня глубины на каждую тему — чтобы знать, когда остановиться.</p>
+</header>
+
+<h2>Сначала — устройство рассказа</h2>
+<p>Вся ML-часть отвечает на <strong>один вопрос</strong>: нужна ли здесь сложная модель? Ты задаёшь его дважды и оба раза отвечаешь измерением. Это и есть сюжет — не «я сделал модельку», а «я проверил гипотезу».</p>
+<div class="twrap">
+  <table>
+    <thead><tr><th>Акт</th><th>Слайды</th><th>Что доказываешь</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Данные</strong></td><td>1–2</td><td>Готовых данных не было, собрал сам и понял их устройство</td></tr>
+      <tr><td><strong>Модель</strong></td><td>3–4</td><td>Простое не проиграло сложному, и я знаю почему</td></tr>
+      <tr><td><strong>Пределы</strong></td><td>5</td><td>Знаю, где метод перестаёт работать, и говорю это сам</td></tr>
+      <tr><td><strong>Проверка себя</strong></td><td>6</td><td>Взял задачу, где сложное должно выиграть — и оно выиграло</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="warn">
+  <div class="h">Почему шестой слайд обязателен</div>
+  <p>Без него твой вывод звучит как «я не осилил нейросети». С ним — как «я проверяю, а не следую моде». Один слайд переворачивает восприятие всей работы.</p>
+</div>
+
+<h2>Слайд за слайдом</h2>
+
+<!-- 1 -->
+<div class="slide">
+  <div class="head"><span class="n">1</span><h3>Данные: собрал сам</h3><span class="sec">~40 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li>Воронка крупными цифрами: <strong>24 сайта → 6391 цена → 2108 после чистки</strong></li>
+        <li>Подпись: 35 видов работ · 22 компании · 7 городов</li>
+        <li>Три сита чистки в строку: распознавание → правдоподобие → выбросы</li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Открытых датасетов с ценами на ремонт по России не существует — я проверял. Поэтому данные собрал сам: скрапер обошёл прайс-листы ремонтных компаний в семи городах и собрал 6391 цену.</p>
+        <p>Дальше самое трудоёмкое — привести к единому виду. Одна и та же работа у всех называется по-разному: „укладка плитки на пол“, „плитка напольная“, „облицовка керамогранитом“. Я написал 35 правил, которые сводят это к 35 каноничным работам, и три фильтра чистки. Осталось 2108 цен от 22 компаний.»</p>
+      </div>
+    </div>
+    <div class="row"><div class="lbl ask">Ждать вопрос</div>
+      <p><em>«Это законно?»</em> → Публичные прайс-листы, персональных данных не собирал.<br>
+      <em>«Почему выкинули две трети?»</em> → Отсеялись нераспознанные работы и ошибки извлечения: скрапер иногда цеплял соседнюю колонку. Лучше меньше, но чисто.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="slide">
+  <div class="head"><span class="n">2</span><h3>EDA: что данные сказали о себе</h3><span class="sec">~50 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li><span class="fig">01_price_distribution.png</span> — цена в рублях и в логарифме</li>
+        <li>Рядом три вывода: логнормальность · разрыв компаний ×5.3 · разброс внутри работы до ×6.2</li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Разведочный анализ дал три вещи, и каждая определила дальнейшие решения.</p>
+        <p>Первое: цены логнормальны — слева видно длинный хвост, справа тот же массив в логарифме, уже почти симметричный. Поэтому модель обучается на логарифме цены.</p>
+        <p>Второе: медианные цены компаний различаются в 5.3 раза. Значит, случайный сплит завысил бы качество — нужна валидация с сокрытием компании целиком.</p>
+        <p>Третье: внутри одной работы разброс между дешёвым и дорогим краем рынка доходит до 6 раз. Это заранее объясняет, почему умеренную накрутку поймать невозможно.»</p>
+      </div>
+    </div>
+    <div class="row"><div class="lbl ask">Ждать вопрос</div>
+      <p><em>«Зачем логарифм?»</em> → см. блок «Три уровня глубины» ниже, тема 1.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="slide">
+  <div class="head"><span class="n">3</span><h3>Модель цены: простое против сложного</h3><span class="sec">~60 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li>Таблица: линейная <strong>R² 0.783</strong> · XGBoost настроенный <strong>0.769</strong> · из коробки <strong>0.727</strong></li>
+        <li>Формула словами: <code>цена = базовая × k(работа) × k(город) × k(компания)</code></li>
+        <li><span class="fig">07_feature_importance.png</span></li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Задача — предсказать справедливую цену работы. Признаков пять, и все категориальные: вид работы, категория, единица, город, компания.</p>
+        <p>Я ожидал, что выиграет градиентный бустинг, и дал ему фору: перебрал 12 конфигураций и взял лучшую. Он не выиграл — 0.769 против 0.783 у линейной регрессии.</p>
+        <p>И я понимаю, почему. Когда обучаешься на логарифме, сложение вкладов превращается в умножение цен. То есть линейная модель здесь — это модель наценок: базовая цена, коэффициент города, коэффициент подрядчика. Ровно так считает живой сметчик. Модель совпала по форме с тем, как реально устроено ценообразование, и бустингу нечего было добавить.»</p>
+      </div>
+    </div>
+    <div class="warn">
+      <div class="h">Никогда не говори</div>
+      <p><span class="never">«статистически незначимо»</span> — теста не было. Говори: <span class="good">«выигрыш 1.0 п.п. меньше межфолдового разброса 2.6 п.п., поэтому по заранее заданному правилу простоты взял линейную».</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="slide">
+  <div class="head"><span class="n">4</span><h3>Валидация: три схемы</h3><span class="sec">~40 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li>Три строки: случайный сплит <strong>R² 0.739</strong> · 5-fold CV <strong>0.783</strong> · LOCO <strong>0.70 ± 0.09</strong></li>
+        <li>Схемка LOCO: 22 компании, одна спрятана, 21 в обучении</li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Одной проверки мало, поэтому три. Случайный сплит отвечает, работает ли модель вообще. Кросс-валидация — не повезло ли с разбиением.</p>
+        <p>Главная — третья. Leave-one-company-out: я прячу все цены одной компании, учусь на остальных двадцати одной и проверяюсь на спрятанной. И так 22 раза. Это воспроизводит реальность: смета приходит от подрядчика, которого модель никогда не видела. Качество падает с 0.783 до 0.70 — это честная цена незнакомого источника.»</p>
+      </div>
+    </div>
+    <div class="row"><div class="lbl ask">Ждать вопрос</div>
+      <p><em>«Зачем так сложно?»</em> → При случайном сплите одна компания попадает и в обучение, и в тест — модель подглядывает её уровень цен. Это утечка, и она красит результат.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="slide">
+  <div class="head"><span class="n">5</span><h3>Детекция завышений и её пределы</h3><span class="sec">~60 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li><span class="fig">09_anomaly_real_roc_pr.png</span> — ROC и PR-кривые</li>
+        <li>Цифры: ROC-AUC <strong>0.879</strong> · PR-AUC 0.698 · precision <strong>0.824</strong> · recall 0.318</li>
+        <li>Отдельной строкой: стресс-тест на синтетике — <strong>0.571</strong></li>
+        <li><span class="fig">04_price_spread_by_work.png</span> — почему предел именно такой</li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Для каждой работы строю коридор от P10 до P90. Цена вне коридора помечается.</p>
+        <p>Проверка — тем же leave-one-company-out. Получил 0.879, точность 0.824. Но важно, как это называть: это <strong>proxy anomaly agreement</strong> — согласие двух независимых способов признать цену экстремальной, а не точность поимки мошенников. Размеченных доказанных завышений в открытых данных не существует, и я это не маскирую.</p>
+        <p>Полнота 0.318 — сознательный выбор порога. Ложное обвинение подрядчика вредит продукту сильнее, чем пропущенная переплата.</p>
+        <p>И честный предел: на синтетических накрутках +25% метрика падает до 0.571. Вот почему — разброс внутри одной работы и так доходит до шести раз, накрутка просто тонет в нём. Это ограничение снимается только объёмами работ, а они появляются внутри платформы.»</p>
+      </div>
+    </div>
+    <div class="warn">
+      <div class="h">Три запретные формулировки</div>
+      <p><span class="never">«детектор мошенничества»</span> · <span class="never">«точность детекции завышений 88%»</span> · <span class="never">«мы ловим обманщиков»</span></p>
+      <p>Говори: <span class="good">«система поиска рыночных отклонений»</span>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 6 -->
+<div class="slide">
+  <div class="head"><span class="n">6</span><h3>Проверка себя: задача, где сложное должно выиграть</h3><span class="sec">~50 сек</span></div>
+  <div class="body">
+    <div class="row"><div class="lbl show">На слайде</div>
+      <ul class="plain">
+        <li>Заголовок-вопрос: «А может, я просто избегаю сложных моделей?»</li>
+        <li>Таблица: трансформер <strong>0.962</strong> · словарь <strong>0.870</strong> · baseline <strong>0.500</strong></li>
+        <li>Внизу мелким: аспекты 0.513 — не выпущено</li>
+      </ul>
+    </div>
+    <div class="row"><div class="lbl say">Говоришь</div>
+      <div class="say-box">
+        <p>«Отказ от сложной модели легко превращается в лень, поэтому я себя проверил: взял задачу, где сложное обязано выиграть — тексты отзывов.</p>
+        <p>Собрал 1212 отзывов. Сначала попались только хорошие — 98% пятёрок, на таких данных проверять нечего. Пришлось специально добирать негативные с другой площадки, чтобы получить баланс.</p>
+        <p>И здесь трансформер выиграл уверенно: 0.962 против 0.870 у словарного метода и 0.500 у пустого baseline. Значит, я выбираю модель по данным, а не по привычке.</p>
+        <p>При этом аспектную часть — «эта фраза про сроки или про качество» — я <strong>не выпустил</strong>: точность 0.513, разметки мало. Проверил и не выпустил.»</p>
+      </div>
+    </div>
+    <div class="warn">
+      <div class="h">Не перепутай числа</div>
+      <p>0.962 — это тональность <strong>отзыва целиком</strong>, разметка выведена из звёзд. Это <span class="never">не метрика аспектного анализа</span>. Если спросят — так и скажи.</p>
+    </div>
+  </div>
+</div>
+
+<h2>Три уровня глубины</h2>
+<p>Главная ошибка на защите — уйти вглубь, когда не просили, и утонуть. Правило: <strong>начинаешь с первого уровня и идёшь дальше, только если переспросили.</strong></p>
+
+<h3 style="margin-top:22px">Тема 1 · Зачем логарифм цены</h3>
+<div class="depth">
+  <div class="lvl"><b>Коротко</b><span>Цены различаются в сотни раз, логарифм делает ошибки процентными, а не рублёвыми.</span></div>
+  <div class="lvl"><b>Если спросят</b><span>Без логарифма промах на 500 ₽ на щитке за 30 000 и на грунтовке за 100 для модели одинаков. Но первое — это 2%, а второе — 500%. Модель бы вылизывала дорогие работы и завалила дешёвые.</span></div>
+  <div class="lvl"><b>Если копают</b><span>Сложение в логарифме — это умножение в рублях. Поэтому линейная модель на one-hot становится мультипликативной моделью наценок, совпадающей со структурой ценообразования. Это же объясняет, почему бустинг не дал прироста.</span></div>
+</div>
+
+<h3 style="margin-top:22px">Тема 2 · Почему линейная, а не бустинг</h3>
+<div class="depth">
+  <div class="lvl"><b>Коротко</b><span>Проверил на кросс-валидации: 0.783 против 0.769. Сложная не выиграла — взял простую.</span></div>
+  <div class="lvl"><b>Если спросят</b><span>XGBoost тюнился по сетке из 12 конфигураций, брал лучшую. По MAPE он был впереди на 1.0 п.п., но межфолдовый разброс 2.6 п.п. — выигрыш меньше собственного шума. Правило выбора записано в коде заранее.</span></div>
+  <div class="lvl"><b>Если копают</b><span>Признаки чисто категориальные, взаимодействий, которые ищет бустинг, в них нет. Плюс тюнинг и сравнение шли на одних фолдах — то есть с форой в пользу XGBoost, и он всё равно не оторвался. Строгий вывод потребовал бы paired-теста или nested CV, у меня их нет.</span></div>
+</div>
+
+<h3 style="margin-top:22px">Тема 3 · Что означает 0.879</h3>
+<div class="depth">
+  <div class="lvl"><b>Коротко</b><span>Согласие двух способов признать цену экстремальной. Не точность поимки завышений.</span></div>
+  <div class="lvl"><b>Если спросят</b><span>Балл даёт остаток модели, не видевшей компанию. Метку даёт рыночный коридор, посчитанный только на train этого фолда. Оба показателя независимы от тестовой компании.</span></div>
+  <div class="lvl"><b>Если копают</b><span>Да, постановка частично круговая: оба измеряют отклонение от типичной цены. Поэтому метрика и названа proxy agreement. Раньше была ещё и утечка — коридоры считались по всему датасету; я это устранил, и метрика не упала: 0.872 стало 0.879. Настоящие метки даст только арбитраж внутри платформы.</span></div>
+</div>
+
+<h3 style="margin-top:22px">Тема 4 · Почему стресс-тест всего 0.571</h3>
+<div class="depth">
+  <div class="lvl"><b>Коротко</b><span>Умеренная накрутка тонет в обычном рыночном разбросе. Это предел задачи, а не модели.</span></div>
+  <div class="lvl"><b>Если спросят</b><span>Я искусственно завысил часть цен на 25–80% и проверил, находятся ли они. Грубые находятся, умеренные нет: разброс P90/P10 внутри работы доходит до шести раз, +25% внутри него незаметны.</span></div>
+  <div class="lvl"><b>Если копают</b><span>Снять это можно только новыми признаками — объёмами работ, составом позиций, историей проекта. Их нет в прайс-листах, они рождаются внутри платформы. Поэтому это не баг, а обоснование roadmap.</span></div>
+</div>
+
+<h3 style="margin-top:22px">Тема 5 · Отзывы и что там на самом деле измерено</h3>
+<div class="depth">
+  <div class="lvl"><b>Коротко</b><span>Трансформер бьёт словарь и baseline: 0.962 / 0.870 / 0.500. На тексте сложное окупается.</span></div>
+  <div class="lvl"><b>Если спросят</b><span>Это тональность отзыва целиком, разметка выведена из звёзд: 4.5–5 позитив, 1–2 негатив. Специально собрал сбалансированный набор 264 на 264, чтобы пустой baseline давал ровно 50%.</span></div>
+  <div class="lvl"><b>Если копают</b><span>Аспектный пайплайн проверялся отдельно на 108 вручную размеченных фразах: точность привязки 0.513 при случайной 0.111. Набор вырожден — 89 позитивов против 3 негативов, судить о негативе по нему нельзя. Поэтому весь аспектный модуль я считаю исследовательским и в MVP не включил.</span></div>
+</div>
+
+<h2>Что показывать из репозитория</h2>
+<p>Если попросят открыть код — открывай в этом порядке, это самая выигрышная последовательность.</p>
+<div class="twrap">
+  <table>
+    <thead><tr><th>Файл</th><th>Что показывает</th></tr></thead>
+    <tbody>
+      <tr><td><code>reports/metrics.json</code></td><td>Все числа сразу, включая причину выбора модели текстом</td></tr>
+      <tr><td><code>src/train_model.py</code> → <code>loco_anomaly_eval</code></td><td>Что коридор считается на train фолда, а не глобально</td></tr>
+      <tr><td><code>src/clean_prices.py</code> → <code>RULES</code></td><td>35 правил и ретроспективная проверка на «водопровод»</td></tr>
+      <tr><td><code>src/copilot_tools.py</code></td><td>Отказ при неизвестной работе, арифметика кодом, source у каждого вывода</td></tr>
+      <tr><td><code>reports/matcher_eval.md</code></td><td>Отрицательный результат: эмбеддинги проиграли regex, в продукт не пошли</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Сборка презентации: порядок слайдов</h2>
+<div class="twrap">
+  <table>
+    <thead><tr><th>№</th><th>Слайд</th><th>Главное на нём</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>Проблема</td><td>45% срыв сроков, 88% доплачивают, 60% хотят проверку сметы</td></tr>
+      <tr><td class="n">2</td><td>Продукт и где ИИ</td><td>ИИ-слой по подписке, не чат-бот</td></tr>
+      <tr><td class="n">3</td><td>Данные</td><td>Воронка 6391 → 2108</td></tr>
+      <tr><td class="n">4</td><td>EDA</td><td>График 01 + три вывода</td></tr>
+      <tr><td class="n">5</td><td>Модель</td><td>Таблица сравнения + важность признаков</td></tr>
+      <tr><td class="n">6</td><td>Валидация</td><td>Три схемы, акцент на LOCO</td></tr>
+      <tr><td class="n">7</td><td>Детекция и пределы</td><td>ROC/PR + честное название метрики</td></tr>
+      <tr><td class="n">8</td><td>Проверка себя</td><td>Отзывы: трансформер выиграл, аспекты не выпущены</td></tr>
+      <tr><td class="n">9</td><td>Продуктовый слой</td><td>Инструменты Copilot и правило «LLM не считает деньги»</td></tr>
+      <tr><td class="n">10</td><td>Ограничения и roadmap</td><td>Три ограничения + маховик данных</td></tr>
+      <tr><td class="n">11</td><td>Мотивация</td><td>Почему AI Talent Hub, конкретные курсы</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="warn">
+  <div class="h">Если времени в обрез</div>
+  <p>Обязательные: <strong>3, 5, 7, 8</strong> — данные, модель, пределы, проверка себя. Остальные можно проговорить устно без слайда.</p>
+</div>
+
+</div>
