@@ -1,0 +1,59 @@
+{
+  "task": "привязка клаузы отзыва к одному из 9 аспектов",
+  "gold_set": {
+    "n_clauses": 108,
+    "n_aspectful": 76,
+    "source": "yell.ru, разметка вручную (src/eval_gold.py)"
+  },
+  "n_classes": 9,
+  "random_baseline": 0.111,
+  "minilm_previous": 0.513,
+  "gigachat_by_threshold": {
+    "threshold_0.0": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.435,
+      "precision_when_assigned": 0.435,
+      "n_assigned": 108
+    },
+    "threshold_0.6": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.435,
+      "precision_when_assigned": 0.435,
+      "n_assigned": 108
+    },
+    "threshold_0.65": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.435,
+      "precision_when_assigned": 0.435,
+      "n_assigned": 108
+    },
+    "threshold_0.7": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.435,
+      "precision_when_assigned": 0.435,
+      "n_assigned": 108
+    },
+    "threshold_0.75": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.435,
+      "precision_when_assigned": 0.435,
+      "n_assigned": 108
+    },
+    "threshold_0.8": {
+      "accuracy_on_aspectful": 0.618,
+      "overall_accuracy": 0.444,
+      "precision_when_assigned": 0.439,
+      "n_assigned": 107
+    }
+  },
+  "gigachat_best": {
+    "threshold": 0.0,
+    "accuracy_on_aspectful": 0.618,
+    "overall_accuracy": 0.435,
+    "precision_when_assigned": 0.435,
+    "n_assigned": 108
+  },
+  "gain_over_minilm": 0.105,
+  "verdict": "GigaChat-эмбеддинги заметно лучше — имеет смысл заменить MiniLM",
+  "caveat": "Gold-набор мал (около 100 клауз) и размечен автором. Порог подобран на нём же, отдельного hold-out нет — результат стоит читать как ориентир, а не как честную оценку на новых данных."
+}
