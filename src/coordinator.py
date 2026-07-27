@@ -83,6 +83,21 @@ def extract_slots(text: str) -> dict:
         m2 = re.search(r"(\d+)\s*(?:тыс|тысяч)", low)
         if m2:
             slots["amount"] = int(m2.group(1)) * 1000
+        else:
+            # В рабочих чатах валюту часто опускают: «плюс 12 000 к смете».
+            # Число считаем суммой только рядом с однозначным финансовым
+            # контекстом, чтобы не принять время «приеду в 18 000» за деньги.
+            m3 = re.search(
+                r"(?:плюс|доплат\w*|экономи\w*|дороже|дешевле|"
+                r"вырос\w*|увелич\w*|сниз\w*)\D{0,20}"
+                r"(\d(?:[\s\u00a0\u202f]?\d){2,})"
+                r"|(\d(?:[\s\u00a0\u202f]?\d){2,})\D{0,20}"
+                r"(?:к\s+смете|из\s+сметы|по\s+смете|бюджет\w*)",
+                low,
+            )
+            if m3:
+                raw_amount = m3.group(1) or m3.group(2)
+                slots["amount"] = int(re.sub(r"\s", "", raw_amount))
     else:
         slots["amount"] = int(re.sub(r"\s", "", m.group(1)))
 
@@ -118,7 +133,15 @@ def classify_rules(text: str) -> str | None:
     if re.search(r"задерж|сдвигается|не\s+успе|на\s+складе\s+нет|нет\s+в\s+наличии|"
                  r"пожарн|риск|дольше\s+сохнуть", low):
         return "риск"
-    if re.search(r"\d[\d\s]{2,}\s*(?:руб|₽)|\d+\s*тыс", low) and \
+    explicit_money = re.search(r"\d[\d\s]{2,}\s*(?:руб|₽)|\d+\s*тыс", low)
+    contextual_money = re.search(
+        r"(?:плюс|доплат\w*|экономи\w*|дороже|дешевле|вырос\w*|"
+        r"увелич\w*|сниз\w*)\D{0,20}\d(?:[\s\u00a0\u202f]?\d){2,}"
+        r"|\d(?:[\s\u00a0\u202f]?\d){2,}\D{0,20}"
+        r"(?:к\s+смете|из\s+сметы|по\s+смете|бюджет\w*)",
+        low,
+    )
+    if (explicit_money or contextual_money) and \
        re.search(r"дороже|плюс|вырос|экономи|смет", low):
         return "финансовое_согласование"
     if re.search(r"^[А-ЯЁ][а-яё]+\s*,\s*(?:пришли|сделай|отправь|подготовь)", text) or \

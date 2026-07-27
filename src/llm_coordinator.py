@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 import uuid
 
@@ -13,6 +14,9 @@ CACHED = os.path.join(BASE, "..", "data", "demo", "llm_response.json")
 
 GIGACHAT_OAUTH = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_API = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+
+_TOKEN_CACHE: dict[tuple[str, str, bool], tuple[str, float]] = {}
+_TOKEN_LOCK = threading.Lock()
 
 EVENT_TYPES = ("task", "decision", "budget_change", "acceptance_request",
                "risk", "question")
@@ -88,25 +92,43 @@ def load_env(path: str | None = None) -> None:
 
 
 def _gigachat_token(auth_key: str, scope: str, verify: bool) -> str:
-    r = requests.post(
-        GIGACHAT_OAUTH,
-        headers={"Authorization": f"Basic {auth_key}",
-                 "RqUID": str(uuid.uuid4()),
-                 "Content-Type": "application/x-www-form-urlencoded"},
-        data={"scope": scope}, verify=verify, timeout=30)
-    r.raise_for_status()
-    return r.json()["access_token"]
+    cache_key = (auth_key, scope, verify)
+    with _TOKEN_LOCK:
+        cached = _TOKEN_CACHE.get(cache_key)
+        if cached and cached[1] > time.time() + 60:
+            return cached[0]
+        r = requests.post(
+            GIGACHAT_OAUTH,
+            headers={"Authorization": f"Basic {auth_key}",
+                     "RqUID": str(uuid.uuid4()),
+                     "Content-Type": "application/x-www-form-urlencoded"},
+            data={"scope": scope}, verify=verify, timeout=30)
+        r.raise_for_status()
+        payload = r.json()
+        expires_at = payload.get("expires_at", (time.time() + 25 * 60) * 1000)
+        # GigaChat возвращает Unix time в миллисекундах.
+        expires_at = float(expires_at)
+        if expires_at > 10_000_000_000:
+            expires_at /= 1000
+        _TOKEN_CACHE[cache_key] = (payload["access_token"], expires_at)
+        return payload["access_token"]
 
 
-def call_llm(user_content: str, temperature: float = 0.0) -> str:
+def call_llm(user_content: str, temperature: float = 0.0,
+             system_prompt: str | None = None,
+             response_format: dict | None = None) -> str:
     load_env()
     provider = os.environ.get("LLM_PROVIDER", "openai").lower()
     model = os.environ.get("LLM_MODEL") or ""
     verify = os.environ.get("LLM_VERIFY_SSL", "0") == "1"
 
     payload = {"model": model, "temperature": temperature,
-               "messages": [{"role": "system", "content": SYSTEM_PROMPT},
+               "max_tokens": int(os.environ.get("LLM_MAX_TOKENS", "4000")),
+               "messages": [{"role": "system",
+                             "content": system_prompt or SYSTEM_PROMPT},
                             {"role": "user", "content": user_content}]}
+    if response_format is not None and provider == "gigachat":
+        payload["response_format"] = response_format
 
     if provider == "gigachat":
         auth = os.environ.get("LLM_AUTH_KEY")
@@ -114,7 +136,12 @@ def call_llm(user_content: str, temperature: float = 0.0) -> str:
             raise LLMUnavailable("LLM_AUTH_KEY не задан")
         token = _gigachat_token(auth, os.environ.get("LLM_SCOPE",
                                                      "GIGACHAT_API_PERS"), verify)
-        url, headers = GIGACHAT_API, {"Authorization": f"Bearer {token}"}
+        base = os.environ.get("GIGACHAT_CHAT_API_BASE")
+        url = (
+            base.rstrip("/") + "/chat/completions"
+            if base else GIGACHAT_API
+        )
+        headers = {"Authorization": f"Bearer {token}"}
     else:
         key = os.environ.get("LLM_API_KEY")
         base = os.environ.get("LLM_API_BASE")
@@ -124,9 +151,18 @@ def call_llm(user_content: str, temperature: float = 0.0) -> str:
             {"Authorization": f"Bearer {key}"}
 
     headers["Content-Type"] = "application/json"
-    r = requests.post(url, headers=headers, json=payload, verify=verify, timeout=120)
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    retries = int(os.environ.get("LLM_RETRIES", "2"))
+    for attempt in range(retries + 1):
+        r = requests.post(
+            url, headers=headers, json=payload, verify=verify, timeout=120
+        )
+        if r.status_code != 429 or attempt == retries:
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"]
+        retry_after = r.headers.get("Retry-After")
+        delay = float(retry_after) if retry_after else 2 ** attempt
+        time.sleep(min(max(delay, 1.0), 10.0))
+    raise LLMUnavailable("LLM не вернула ответ")
 
 
 def build_user_content(messages: list[dict], project: str = "") -> str:
@@ -145,7 +181,10 @@ def extract_json(raw: str) -> dict:
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1 or end <= start:
         raise ValueError("в ответе модели нет JSON-объекта")
-    return json.loads(text[start:end + 1])
+    # strict=False допускает неэкранированный перевод строки внутри строкового
+    # поля — редкая, но наблюдавшаяся ошибка генеративных моделей. Структуру
+    # результата ниже всё равно проверяет явный валидатор.
+    return json.loads(text[start:end + 1], strict=False)
 
 
 def validate_events(parsed: dict, messages: list[dict]) -> tuple[list, list]:

@@ -28,11 +28,13 @@ def test_task_with_named_assignee():
 
 def test_money_event_needs_both_sum_and_context():
     assert classify_rules("Выходит дороже на 34 000 руб") == "финансовое_согласование"
+    assert classify_rules("Это плюс 12 000 к смете") == "финансовое_согласование"
     assert classify_rules("Приеду в 18 000 если успею") != "финансовое_согласование"
 
 
 def test_amount_parsed_in_both_formats():
     assert extract_slots("плюс 12 000 руб к смете")["amount"] == 12000
+    assert extract_slots("это плюс 12 000 к смете")["amount"] == 12000
     assert extract_slots("согласен на 34 тысячи")["amount"] == 34000
 
 

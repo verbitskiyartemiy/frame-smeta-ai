@@ -9,7 +9,7 @@ import requests
 
 BASE = os.path.dirname(__file__)
 CACHE = os.path.abspath(os.path.join(BASE, "..", "data", "processed", "emb_cache.json"))
-API = "https://gigachat.devices.sberbank.ru/api/v1/embeddings"
+API = "https://api.giga.chat/v1/embeddings"
 BATCH = 12
 RETRIES = 4
 
@@ -54,7 +54,9 @@ def embed(texts: list[str], model: str | None = None,
             chunk = missing[i:i + BATCH]
             for attempt in range(RETRIES):
                 try:
-                    r = requests.post(API, headers=headers,
+                    base = os.environ.get("GIGACHAT_EMBEDDINGS_API_BASE")
+                    url = base.rstrip("/") + "/embeddings" if base else API
+                    r = requests.post(url, headers=headers,
                                       json={"model": model, "input": chunk},
                                       verify=verify, timeout=120)
                     r.raise_for_status()

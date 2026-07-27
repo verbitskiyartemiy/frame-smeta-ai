@@ -31,6 +31,17 @@ EXAMPLE_REVIEWS = """Мастер опоздал на неделю и посто
 
 Качество хорошее, но смета выросла в полтора раза в процессе работы. На претензии реагировали неохотно, недочёты устраняли со скрипом."""
 
+EXAMPLE_CHAT = """Мастер Алексей: Обнаружили старую проводку в стене, её надо менять. Это плюс 12 000 к смете
+Заказчик: А без замены никак? Что будет если оставить
+Прораб Игорь: Оставлять нельзя, алюминий, пожарный риск
+Заказчик: Тогда меняем конечно
+Мастер Алексей: Разводка электрики в кухне готова, прошу принять
+Заказчик: Приеду вечером посмотрю
+Заказчик: Посмотрел электрику, одна розетка не там где на плане. Нужно исправить
+Мастер Алексей: Исправим сегодня, там немного
+Прораб Игорь: Смету обновил, итог вырос до 246 000 рублей
+Заказчик: Это больше чем мы обсуждали. Откуда разница"""
+
 
 def _num(x: str):
     x = re.sub(r"[^\d.,]", "", str(x)).replace(",", ".")
@@ -100,9 +111,9 @@ def analyze(text: str):
             f"- Распознано позиций: **{recognized}**\n"
             f"- 🚩 Помечено как аномальные: **{flagged}**\n"
             f"- Сумма по смете: **{total_quoted:,.0f} ₽**\n"
-            f"- Справедливая оценка (медиана рынка): **{total_fair:,.0f} ₽**\n"
+            f"- Медианный рыночный ориентир: **{total_fair:,.0f} ₽**\n"
             f"- Разница: **{overpay:+,.0f} ₽** "
-            f"({'переплата' if overpay > 0 else 'ниже рынка'})"
+            f"({'выше медианного ориентира' if overpay > 0 else 'ниже медианы'})"
         )
     return table, summary
 
@@ -130,18 +141,105 @@ def analyze_reviews(text: str):
     return table, summary
 
 
+def parse_chat(text: str) -> list[dict]:
+    messages = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if ":" in line:
+            author, message = line.split(":", 1)
+        else:
+            author, message = "Участник", line
+        if not message.strip():
+            continue
+        messages.append({
+            "id": len(messages) + 1,
+            "author": author.strip() or "Участник",
+            "text": message.strip(),
+            "ts": "",
+        })
+    return messages
+
+
+def analyze_chat(text: str):
+    from hybrid_coordinator import analyze_hybrid
+
+    messages = parse_chat(text)
+    if not messages:
+        return pd.DataFrame(), "Вставьте переписку в формате `Имя: сообщение`."
+    result = analyze_hybrid(messages, use_embeddings=True)
+    message_by_id = {message["id"]: message for message in messages}
+    rows = []
+    for event in result["events"]:
+        fields = []
+        if event.get("assignee"):
+            fields.append(f"кто: {event['assignee']}")
+        if event.get("deadline_text"):
+            fields.append(f"срок: {event['deadline_text']}")
+        if event.get("amount_rub"):
+            direction = {
+                "increase": "+",
+                "decrease": "−",
+                "new_total": "итог ",
+                "unspecified": "",
+                None: "",
+            }[event.get("amount_kind")]
+            amount = f"{event['amount_rub']:,.0f}".replace(",", " ")
+            fields.append(f"сумма: {direction}{amount} ₽")
+        quotes = " / ".join(
+            f"#{source_id} «{message_by_id[source_id]['text']}»"
+            for source_id in event["source_message_ids"]
+        )
+        rows.append([
+            event["event_id"],
+            event["event_type"],
+            event["title"],
+            " · ".join(fields) or "—",
+            event["workflow_state"],
+            quotes,
+            " / ".join(event["suggested_actions"]),
+            event["detected_by"],
+        ])
+    table = pd.DataFrame(rows, columns=[
+        "ID", "Тип", "Карточка", "Поля", "Состояние",
+        "Исходные сообщения", "Действия после подтверждения", "Метод",
+    ])
+    mode = {
+        "LIVE_HYBRID": "GigaChat + правила",
+        "PARTIAL_HYBRID": "частично GigaChat, частично fallback",
+        "RULES_ONLY": "rule fallback — API недоступен",
+    }[result["mode"]]
+    summary = (
+        f"### Найдено карточек: **{len(result['events'])}**\n"
+        f"- Режим: **{mode}**\n"
+        f"- Сообщений: {len(messages)}, кандидатов: "
+        f"{result['stats']['candidates']} "
+        f"(semantic-only: {result['stats'].get('semantic_candidates', 0)})\n"
+        f"- Обработка: {result['elapsed_sec']} с\n"
+        f"- Каждая карточка содержит исходные сообщения; действия выполняются "
+        f"только после подтверждения человеком."
+    )
+    if result["errors"]:
+        summary += (
+            f"\n- Валидатор/фолбэк: {len(result['errors'])} замечаний "
+            f"(невалидный ответ модели не превращается в действие)."
+        )
+    return table, summary
+
+
 def build_app():
     import gradio as gr
-    with gr.Blocks(title="FRAME · AI-анализ смет", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="FRAME · AI-анализ смет") as demo:
         gr.Markdown(
             "# 🏗️ FRAME · AI-модули платформы\n"
             "_Демо ИИ-слоя FRAME: анализ смет (фича 5.2) и структурный рейтинг "
-            "мастеров по отзывам (фича 5.3)._"
+            "мастеров по отзывам (фича 5.3), координатор переписки._"
         )
         with gr.Tab("💰 Анализ сметы"):
             gr.Markdown(
                 "Вставьте смету подрядчика — модель сравнит каждую позицию с реальными "
-                "рыночными ценами (2108 цен, 22 компании, 7 городов) и пометит "
+                "рыночными ценами (2 369 цен, 22 компании, 7 городов) и пометит "
                 "**завышенные** позиции."
             )
             with gr.Row():
@@ -150,12 +248,36 @@ def build_app():
                         label="Смета (одна позиция в строке: Название; количество; цена/ед)",
                         value=EXAMPLE, lines=10)
                     btn = gr.Button("🔍 Проверить смету", variant="primary")
-                    gr.Markdown("Распознаётся **35 видов работ**: штукатурка, стяжка, "
+                    gr.Markdown("Распознаётся **47 типов работ**: штукатурка, стяжка, "
                                 "плитка, обои, электрика, сантехника, потолки, двери и др.")
                 with gr.Column(scale=2):
                     out_sum = gr.Markdown()
                     out_tbl = gr.Dataframe(label="Разбор по позициям", wrap=True)
             btn.click(analyze, inputs=inp, outputs=[out_tbl, out_sum])
+        with gr.Tab("💬 Координатор переписки"):
+            gr.Markdown(
+                "Вставьте фрагмент чата. Правила найдут кандидатов, GigaChat "
+                "свяжет реплики в события, а валидатор проверит суммы и ссылки "
+                "на исходные сообщения. Формат: `Имя: сообщение`."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    cinp = gr.Textbox(
+                        label="Переписка проекта",
+                        value=EXAMPLE_CHAT,
+                        lines=16,
+                    )
+                    cbtn = gr.Button(
+                        "🧠 Подготовить карточки и напоминания",
+                        variant="primary",
+                    )
+                with gr.Column(scale=2):
+                    csum = gr.Markdown()
+                    ctbl = gr.Dataframe(
+                        label="Предложения координатора — требуют подтверждения",
+                        wrap=True,
+                    )
+            cbtn.click(analyze_chat, inputs=cinp, outputs=[ctbl, csum])
         with gr.Tab("⭐ Рейтинг мастера по отзывам"):
             gr.Markdown(
                 "Вставьте отзывы о мастере (разделитель — пустая строка) — модель "
@@ -177,4 +299,5 @@ def build_app():
 
 if __name__ == "__main__":
     build_app().launch(server_name="0.0.0.0", server_port=7860,
-                       inbrowser=False, show_error=True)
+                       inbrowser=False, show_error=True,
+                       theme=gr.themes.Soft())

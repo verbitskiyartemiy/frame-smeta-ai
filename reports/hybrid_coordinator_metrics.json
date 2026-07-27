@@ -1,0 +1,146 @@
+{
+  "run_mode": "LIVE_HYBRID",
+  "corpus": {
+    "origin": "synthetic",
+    "annotation": "manual",
+    "unit": "one product card per real-world event, possibly spanning several messages",
+    "warning": "The dialogue and labels were created by the project author. This dataset validates pipeline logic, not production quality.",
+    "path": "data/demo/chat_events_gold.json",
+    "n_messages": 45,
+    "n_events": 19
+  },
+  "evaluation_unit": "event key = anchor_message_id + event_type; related messages are measured separately by exact linkage",
+  "rules": {
+    "n_events": 22,
+    "event_detection": {
+      "precision": 0.682,
+      "recall": 0.789,
+      "f1": 0.732,
+      "tp": 15,
+      "fp": 7,
+      "fn": 4
+    },
+    "multi_message_linkage": {
+      "support": 13,
+      "matched_events": 12,
+      "exact_source_sets": 0,
+      "accuracy": 0.0
+    },
+    "workflow_state": {
+      "support": 15,
+      "correct": 5,
+      "accuracy": 0.333
+    },
+    "amount": {
+      "support": 4,
+      "matched_events": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "kind_correct": 4,
+      "kind_accuracy": 1.0
+    },
+    "source_grounding_rate": 1.0,
+    "missed": [
+      {
+        "anchor_message_id": 7,
+        "event_type": "question"
+      },
+      {
+        "anchor_message_id": 14,
+        "event_type": "question"
+      },
+      {
+        "anchor_message_id": 28,
+        "event_type": "question"
+      },
+      {
+        "anchor_message_id": 42,
+        "event_type": "question"
+      }
+    ],
+    "spurious": [
+      {
+        "anchor_message_id": 4,
+        "event_type": "decision"
+      },
+      {
+        "anchor_message_id": 9,
+        "event_type": "decision"
+      },
+      {
+        "anchor_message_id": 11,
+        "event_type": "question"
+      },
+      {
+        "anchor_message_id": 19,
+        "event_type": "question"
+      },
+      {
+        "anchor_message_id": 20,
+        "event_type": "risk"
+      },
+      {
+        "anchor_message_id": 21,
+        "event_type": "decision"
+      },
+      {
+        "anchor_message_id": 39,
+        "event_type": "decision"
+      }
+    ]
+  },
+  "hybrid": {
+    "n_events": 20,
+    "event_detection": {
+      "precision": 0.95,
+      "recall": 1.0,
+      "f1": 0.974,
+      "tp": 19,
+      "fp": 1,
+      "fn": 0
+    },
+    "multi_message_linkage": {
+      "support": 13,
+      "matched_events": 13,
+      "exact_source_sets": 10,
+      "accuracy": 0.769
+    },
+    "workflow_state": {
+      "support": 19,
+      "correct": 17,
+      "accuracy": 0.895
+    },
+    "amount": {
+      "support": 4,
+      "matched_events": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "kind_correct": 3,
+      "kind_accuracy": 0.75
+    },
+    "source_grounding_rate": 1.0,
+    "missed": [],
+    "spurious": [
+      {
+        "anchor_message_id": 11,
+        "event_type": "question"
+      }
+    ]
+  },
+  "hybrid_runtime": {
+    "messages": 45,
+    "candidates": 32,
+    "hard_candidates": 22,
+    "soft_candidates": 10,
+    "semantic_candidates": 0,
+    "embeddings_enabled": true,
+    "semantic_context_messages": 1,
+    "chunks": 3,
+    "live_chunks": 3,
+    "events": 20,
+    "elapsed_sec": 35.0,
+    "validation_errors": 0,
+    "errors": [],
+    "suppressed_candidates": 5
+  }
+}

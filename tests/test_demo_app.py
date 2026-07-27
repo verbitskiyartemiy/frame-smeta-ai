@@ -1,6 +1,7 @@
 import pytest
+from unittest import mock
 
-from demo_app import _num, analyze, parse_line
+from demo_app import _num, analyze, analyze_chat, parse_chat, parse_line
 
 
 @pytest.mark.parametrize("raw,expected", [
@@ -56,3 +57,39 @@ def test_analyze_flags_unrecognized_work_as_no_data():
 def test_analyze_skips_blank_and_unparseable_lines():
     table, summary = analyze("\nтолько название\nПоклейка обоев; 1; 400\n")
     assert len(table) == 1
+
+
+def test_parse_chat_assigns_ids_and_authors():
+    messages = parse_chat("Заказчик: Когда закончите\nПрораб: До пятницы")
+    assert [message["id"] for message in messages] == [1, 2]
+    assert messages[0]["author"] == "Заказчик"
+    assert messages[1]["text"] == "До пятницы"
+
+
+def test_chat_demo_shows_grounded_card_and_mode():
+    fake = {
+        "mode": "LIVE_HYBRID",
+        "events": [{
+            "event_id": "event_1",
+            "event_type": "budget_change",
+            "title": "Доплата",
+            "assignee": None,
+            "deadline_text": None,
+            "amount_rub": 12000.0,
+            "amount_kind": "increase",
+            "workflow_state": "approved",
+            "source_message_ids": [1, 2],
+            "suggested_actions": ["Согласовать сумму"],
+            "detected_by": "rules+llm",
+        }],
+        "errors": [],
+        "stats": {"candidates": 2},
+        "elapsed_sec": 1.2,
+    }
+    text = "Прораб: Плюс 12 000 к смете\nЗаказчик: Согласен"
+    with mock.patch("hybrid_coordinator.analyze_hybrid", return_value=fake):
+        table, summary = analyze_chat(text)
+    assert len(table) == 1
+    assert "#1" in table.iloc[0]["Исходные сообщения"]
+    assert "+12 000 ₽" in table.iloc[0]["Поля"]
+    assert "GigaChat + правила" in summary

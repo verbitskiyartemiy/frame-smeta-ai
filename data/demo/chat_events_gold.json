@@ -1,0 +1,138 @@
+{
+  "metadata": {
+    "origin": "synthetic",
+    "annotation": "manual",
+    "unit": "one product card per real-world event, possibly spanning several messages",
+    "warning": "The dialogue and labels were created by the project author. This dataset validates pipeline logic, not production quality."
+  },
+  "events": [
+    {
+      "anchor_message_id": 3,
+      "event_type": "acceptance_request",
+      "source_message_ids": [3, 4],
+      "workflow_state": "accepted"
+    },
+    {
+      "anchor_message_id": 5,
+      "event_type": "task",
+      "source_message_ids": [5, 6],
+      "workflow_state": "acknowledged",
+      "assignee": "Игорь",
+      "deadline_text": "до четверга"
+    },
+    {
+      "anchor_message_id": 7,
+      "event_type": "question",
+      "source_message_ids": [7],
+      "workflow_state": "unanswered"
+    },
+    {
+      "anchor_message_id": 8,
+      "event_type": "budget_change",
+      "source_message_ids": [8, 9],
+      "workflow_state": "approved",
+      "amount_rub": 34000,
+      "amount_kind": "increase"
+    },
+    {
+      "anchor_message_id": 10,
+      "event_type": "risk",
+      "source_message_ids": [10, 11, 12],
+      "workflow_state": "mitigated"
+    },
+    {
+      "anchor_message_id": 14,
+      "event_type": "question",
+      "source_message_ids": [14, 29],
+      "workflow_state": "answered"
+    },
+    {
+      "anchor_message_id": 16,
+      "event_type": "task",
+      "source_message_ids": [16, 17],
+      "workflow_state": "acknowledged",
+      "deadline_text": "до понедельника"
+    },
+    {
+      "anchor_message_id": 18,
+      "event_type": "budget_change",
+      "source_message_ids": [18, 19, 20, 21],
+      "workflow_state": "approved",
+      "amount_rub": 12000,
+      "amount_kind": "increase"
+    },
+    {
+      "anchor_message_id": 23,
+      "event_type": "acceptance_request",
+      "source_message_ids": [23, 24],
+      "workflow_state": "pending"
+    },
+    {
+      "anchor_message_id": 26,
+      "event_type": "task",
+      "source_message_ids": [26, 27],
+      "workflow_state": "acknowledged"
+    },
+    {
+      "anchor_message_id": 28,
+      "event_type": "question",
+      "source_message_ids": [28],
+      "workflow_state": "unanswered"
+    },
+    {
+      "anchor_message_id": 31,
+      "event_type": "budget_change",
+      "source_message_ids": [31, 32],
+      "workflow_state": "pending",
+      "amount_rub": 246000,
+      "amount_kind": "new_total"
+    },
+    {
+      "anchor_message_id": 33,
+      "event_type": "acceptance_request",
+      "source_message_ids": [33, 34],
+      "workflow_state": "deferred"
+    },
+    {
+      "anchor_message_id": 35,
+      "event_type": "task",
+      "source_message_ids": [35, 38],
+      "workflow_state": "acknowledged",
+      "assignee": "Настя",
+      "deadline_text": "до вторника"
+    },
+    {
+      "anchor_message_id": 36,
+      "event_type": "risk",
+      "source_message_ids": [36, 39],
+      "workflow_state": "mitigated"
+    },
+    {
+      "anchor_message_id": 40,
+      "event_type": "budget_change",
+      "source_message_ids": [40],
+      "workflow_state": "pending",
+      "amount_rub": 8500,
+      "amount_kind": "decrease"
+    },
+    {
+      "anchor_message_id": 42,
+      "event_type": "question",
+      "source_message_ids": [42],
+      "workflow_state": "unanswered"
+    },
+    {
+      "anchor_message_id": 43,
+      "event_type": "task",
+      "source_message_ids": [43],
+      "workflow_state": "open",
+      "deadline_text": "до пятницы"
+    },
+    {
+      "anchor_message_id": 44,
+      "event_type": "risk",
+      "source_message_ids": [44],
+      "workflow_state": "open"
+    }
+  ]
+}

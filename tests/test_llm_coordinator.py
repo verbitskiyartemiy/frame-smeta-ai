@@ -45,6 +45,12 @@ def test_json_in_markdown_fence_is_extracted():
     assert lc.extract_json(raw) == {"events": []}
 
 
+def test_json_parser_tolerates_raw_newline_inside_string():
+    raw = '{"events": [{"description": "первая\nвторая"}]}'
+    parsed = lc.extract_json(raw)
+    assert parsed["events"][0]["description"] == "первая\nвторая"
+
+
 def test_unknown_event_type_rejected():
     events, errors = lc.validate_events(parse([ev(event_type="потоп")]), MSGS)
     assert not events and "event_type" in errors[0]["reason"]
