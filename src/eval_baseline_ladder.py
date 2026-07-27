@@ -23,6 +23,50 @@ def score(y_true, pred):
             r2_score(y_true, pred))
 
 
+def loco_ladder(df):
+    rows = []
+    for company in df["source"].unique():
+        tr = df[df["source"] != company]
+        te = df[df["source"] == company]
+        if len(te) < 5:
+            continue
+        y = te["price"].to_numpy(float)
+        fallback = float(tr["price"].median())
+
+        m_w = tr.groupby("canonical_work")["price"].median()
+        p_med = te["canonical_work"].map(m_w).fillna(fallback).to_numpy(float)
+
+        pipe = make_pipe(LinearRegression())
+        pipe.fit(tr[FEATURES], np.log(tr["price"]))
+        p_lin = np.exp(pipe.predict(te[FEATURES]))
+
+        rows.append(score(y, p_med) + score(y, p_lin))
+
+    a = np.array(rows)
+    med_better = int((a[:, 2] < a[:, 0]).sum())
+    return {
+        "n_companies": len(a),
+        "median_by_work": {"MAPE": [round(float(a[:, 0].mean()), 1),
+                                    round(float(a[:, 0].std()), 1)],
+                           "R2": round(float(a[:, 1].mean()), 3)},
+        "linear_regression": {"MAPE": [round(float(a[:, 2].mean()), 1),
+                                       round(float(a[:, 2].std()), 1)],
+                              "R2": round(float(a[:, 3].mean()), 3)},
+        "linear_wins_by_mape": med_better,
+        "conclusion": (
+            "На НОВОЙ компании линейная модель по MAPE не превосходит подстановку "
+            f"медианы ({a[:,2].mean():.1f} против {a[:,0].mean():.1f}) и выигрывает "
+            f"лишь на {med_better} компаниях из {len(a)}. По R2 она лучше "
+            f"({a[:,3].mean():.3f} против {a[:,1].mean():.3f}), то есть лучше "
+            "ранжирует, но не точнее в процентах. Выигрыш на случайном CV частично "
+            "объясняется тем, что признак source запоминает ценовой уровень компании, "
+            "а при domain shift этот признак бесполезен. Вывод для продукта: "
+            "в интерфейсе показываем объяснимые рыночные коридоры, а модель даёт "
+            "условную оценку на знакомом распределении."
+        ),
+    }
+
+
 def main():
     df = pd.read_csv(os.path.join(BASE, "..", "data", "processed", "clean_prices.csv"))
     y = df["price"].to_numpy(float)
@@ -90,6 +134,15 @@ def main():
     }
 
     print("\n" + out["verdict"]["conclusion"])
+
+    loco = loco_ladder(df)
+    out["loco_ladder"] = loco
+    print(f"\n--- Тот же вопрос при domain shift (LOCO, {loco['n_companies']} компаний) ---")
+    print(f"  медиана по работе: MAPE {loco['median_by_work']['MAPE'][0]} "
+          f"± {loco['median_by_work']['MAPE'][1]}   R2 {loco['median_by_work']['R2']}")
+    print(f"  линейная модель:   MAPE {loco['linear_regression']['MAPE'][0]} "
+          f"± {loco['linear_regression']['MAPE'][1]}   R2 {loco['linear_regression']['R2']}")
+    print("\n" + loco["conclusion"])
 
     path = os.path.abspath(os.path.join(BASE, "..", "reports", "baseline_ladder.json"))
     with open(path, "w", encoding="utf-8") as f:
