@@ -1,0 +1,244 @@
+<title>FRAME · архитектура доверия: рейтинг, координатор, матчинг</title>
+<style>
+  :root{
+    --paper:#fbfaf8; --card:#fff; --sunk:#f2f0ec; --band:#edeae4;
+    --ink:#191817; --soft:#5a5750; --faint:#918d84;
+    --line:#e5e2dc; --strong:#c9c5bc;
+    --key:#7a4a12; --cool:#2b5d8a; --ok:#256e46; --warm:#a8450f;
+    --mono:ui-monospace,"Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#131211;--card:#1b1a18;--sunk:#171614;--band:#211f1c;
+      --ink:#eceae6;--soft:#a5a199;--faint:#797569;
+      --line:#2a2825;--strong:#3c3934;
+      --key:#d19a55;--cool:#6ea3d4;--ok:#54b183;--warm:#df8355;}
+  }
+  :root[data-theme="dark"]{--paper:#131211;--card:#1b1a18;--sunk:#171614;--band:#211f1c;
+    --ink:#eceae6;--soft:#a5a199;--faint:#797569;
+    --line:#2a2825;--strong:#3c3934;
+    --key:#d19a55;--cool:#6ea3d4;--ok:#54b183;--warm:#df8355;}
+  :root[data-theme="light"]{--paper:#fbfaf8;--card:#fff;--sunk:#f2f0ec;--band:#edeae4;
+    --ink:#191817;--soft:#5a5750;--faint:#918d84;
+    --line:#e5e2dc;--strong:#c9c5bc;
+    --key:#7a4a12;--cool:#2b5d8a;--ok:#256e46;--warm:#a8450f;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .w{max-width:790px;margin:0 auto;padding:0 22px 110px}
+
+  header{padding:46px 0 26px;border-bottom:2px solid var(--ink);margin-bottom:10px}
+  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--key);font-weight:700}
+  h1{font-size:clamp(27px,5.5vw,38px);margin:10px 0 8px;line-height:1.12;
+    letter-spacing:-.02em;font-weight:780;text-wrap:balance}
+  .lede{color:var(--soft);margin:0;font-size:16.5px;max-width:62ch}
+
+  h2{font-size:22px;font-weight:740;letter-spacing:-.014em;margin:52px 0 4px;
+    padding-top:26px;border-top:1px solid var(--line)}
+  h2 .tag{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:8px}
+  h3{font-size:18px;margin:26px 0 6px;font-weight:700;letter-spacing:-.01em}
+  p{margin:10px 0}
+  strong{font-weight:670}
+  code{font-family:var(--mono);font-size:.86em;background:var(--sunk);
+    padding:2px 6px;border-radius:4px}
+  pre{background:var(--sunk);border:1px solid var(--line);border-radius:9px;
+    padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;
+    line-height:1.6;margin:14px 0}
+
+  .verdict{background:var(--card);border:1px solid var(--strong);border-radius:11px;
+    padding:16px 19px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:14px}
+  .verdict .mark{font-family:var(--mono);font-size:11px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:6px;
+    align-self:start;white-space:nowrap}
+  .verdict.go .mark{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+  .verdict.wait .mark{background:color-mix(in srgb,var(--warm) 15%,transparent);color:var(--warm)}
+  .verdict p{margin:4px 0;font-size:15.5px}
+  .verdict p:first-child{margin-top:0}
+
+  .twrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--faint);font-weight:700;background:var(--sunk)}
+  tbody tr:last-child td{border-bottom:none}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .score-card{border:1px solid var(--strong);border-radius:12px;margin:16px 0;overflow:hidden}
+  .score-card .head{padding:13px 17px;background:var(--band);border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  .score-card .head b{font-size:16.5px}
+  .score-card .total{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--key)}
+  .srow{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 17px;
+    border-bottom:1px solid var(--line);font-size:15px;align-items:baseline}
+  .srow:last-child{border-bottom:none}
+  .srow .src{display:block;font-size:12.5px;color:var(--faint);margin-top:2px}
+  .srow .pts{font-family:var(--mono);font-weight:700;white-space:nowrap}
+  .pts.plus{color:var(--ok)} .pts.minus{color:var(--warm)}
+
+  ul{margin:9px 0;padding-left:21px}
+  li{margin:6px 0}
+  .risk{border-left:3px solid var(--warm);background:var(--card);border:1px solid var(--line);
+    border-left:3px solid var(--warm);border-radius:0 9px 9px 0;padding:12px 16px;margin:12px 0;font-size:15px}
+  .risk b:first-child{color:var(--warm)}
+  .note{font-size:14px;color:var(--faint)}
+</style>
+
+<div class="w">
+
+<header>
+  <div class="kick">FRAME · продуктовая архитектура · 27 июля 2026</div>
+  <h1>Архитектура доверия: рейтинг, координатор, матчинг</h1>
+  <p class="lede">Ответ на четыре вопроса: как честно оценивать подрядчика, что стало с детектором смет, как упаковать разбор переписки в продукт и стоит ли делать ML-матчинг. Всё связывает одна идея: <strong>доверие строится на подтверждённых событиях сделки, а не на мнениях.</strong></p>
+</header>
+
+<h2><span class="tag">Задача 1 · спроектировано</span>Рейтинг подрядчика, который нельзя накрутить</h2>
+
+<h3>Ревью того, что есть</h3>
+<p>Сейчас в проекте один источник оценки подрядчика — анализ текста отзывов (ABSA). Честный статус: тональность отзыва целиком модель определяет отлично (ROC-AUC 0.962), но привязку к аспектам «сроки/качество/цена» — слабо (0.513). Строить рейтинг только на отзывах нельзя ещё и по другой причине: <strong>отзывы — это мнения, а мнения накручиваются.</strong> Звёзды на любой площадке — тому доказательство.</p>
+
+<h3>Ключевая идея</h3>
+<p>У FRAME есть то, чего нет у отзовиков: <strong>через платформу проходит сама сделка</strong> — сметы, версии смет, переписка, приёмки этапов, эскроу-платежи. Каждое из этих событий подтверждено деньгами или действием второй стороны, и подделать его в разы дороже, чем написать фейковый отзыв. Рейтинг строим в два слоя:</p>
+
+<div class="twrap">
+<table>
+<thead><tr><th>Слой</th><th>Вес</th><th>Откуда данные</th><th>Можно ли накрутить</th></tr></thead>
+<tbody>
+<tr><td><strong>События сделки</strong> — факты</td><td class="n">70%</td><td>Модули платформы (уже написаны)</td><td>Дорого: нужны реальные сделки с эскроу</td></tr>
+<tr><td><strong>Текст отзывов</strong> — мнения</td><td class="n">30%</td><td>Проверенный sentiment-трансформер</td><td>Сложнее звёзд: отзыв пишет только участник завершённой сделки</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Шесть компонент слоя фактов — и каждая уже опирается на написанный код</h3>
+<div class="twrap">
+<table>
+<thead><tr><th>Компонента</th><th>Что измеряет</th><th>Считается из</th></tr></thead>
+<tbody>
+<tr><td><strong>Ценовая честность</strong></td><td>Доля позиций смет в рыночном коридоре</td><td>Аудит смет (модуль 1)</td></tr>
+<tr><td><strong>Сметная дисциплина</strong></td><td>Насколько итог вырос против исходной сметы</td><td><code>compare_versions</code></td></tr>
+<tr><td><strong>Приёмка с первого раза</strong></td><td>Доля этапов, принятых без переделок</td><td>Карточки «запрос_приёмки» → «решение» (координатор)</td></tr>
+<tr><td><strong>Соблюдение сроков</strong></td><td>Заявленный дедлайн против факта приёмки</td><td>Слоты deadline (координатор)</td></tr>
+<tr><td><strong>Скорость реакции</strong></td><td>Время ответа на вопросы заказчика</td><td>«Вопросы без ответа» (координатор)</td></tr>
+<tr><td><strong>Завершённые проекты</strong></td><td>Сколько сделок доведено до конца через эскроу</td><td>Платёжный контур платформы</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Как это видит неподготовленный человек</h3>
+<p>Не «4.8 ★», а карточка, где у каждой строки есть источник:</p>
+<div class="score-card">
+  <div class="head"><b>Бригада Алексея П.</b><span class="total">87 / 100</span></div>
+  <div class="srow"><span>Цены: 94% позиций смет — в рыночном коридоре<span class="src">по 6 сметам, проверено против базы 2369 цен</span></span><span class="pts plus">+24 / 25</span></div>
+  <div class="srow"><span>Смета выросла в среднем на 6% от исходной<span class="src">среднее по 4 завершённым проектам · медиана рынка ~12%</span></span><span class="pts plus">+18 / 20</span></div>
+  <div class="srow"><span>9 из 11 этапов приняты с первого раза<span class="src">из журнала приёмок</span></span><span class="pts plus">+16 / 20</span></div>
+  <div class="srow"><span>Сроки: 2 переноса на 3 проектах<span class="src">заявленные дедлайны против дат приёмки</span></span><span class="pts minus">+10 / 15</span></div>
+  <div class="srow"><span>Отвечает в среднем за 4 часа<span class="src">из переписки проектов</span></span><span class="pts plus">+9 / 10</span></div>
+  <div class="srow"><span>Отзывы: 8 из 9 позитивные<span class="src">тональность текста, только участники сделок</span></span><span class="pts plus">+10 / 10</span></div>
+</div>
+<p>Правила справедливости: <strong>новичок ≠ плохой</strong> (нет истории → показываем «новый подрядчик, 0 проектов», а не низкий балл); каждая компонента кликается до первичных событий; спорные события уходят в арбитраж, а не в рейтинг напрямую.</p>
+
+<h3>Что доработать (после конкурса)</h3>
+<ul>
+<li>Аспектный профиль отзывов подключается к рейтингу только после дообучения разметки (сейчас 0.513 — в roadmap, это уже честно задокументировано).</li>
+<li>Веса компонент сейчас назначены экспертно; после накопления исходов калибруются регрессией на «проект завершён успешно / со спором».</li>
+</ul>
+
+<h2><span class="tag">Задача 2 · сделано кодом</span>Детектор смет: стал точнее и шире</h2>
+<p>Провёл аудит нераспознанных строк: 43% сырых данных пропадало. Нашёл системные пробелы (линолеум, тёплый пол, декоративная штукатурка, душевые кабины, реечные потолки, панели, побелка, короба ГКЛ) и баг в правиле обоев («обоями» не матчилось). Добавил 12 правил.</p>
+<div class="twrap">
+<table>
+<thead><tr><th></th><th>Было</th><th>Стало</th></tr></thead>
+<tbody>
+<tr><td>Чистых цен</td><td class="n">2108</td><td class="n"><strong>2369</strong> (+12%)</td></tr>
+<tr><td>Видов работ</td><td class="n">35</td><td class="n"><strong>47</strong> (+34%)</td></tr>
+<tr><td>Покрытие сырых строк</td><td class="n">57%</td><td class="n"><strong>63%</strong></td></tr>
+<tr><td>Линейная бьёт медиану (MAPE)</td><td class="n">на 4.5 п.п. при шуме ±3.5</td><td class="n">на <strong>4.9 п.п. при шуме ±0.6</strong></td></tr>
+<tr><td>Линейная против XGBoost (R², CV)</td><td class="n">0.783 против 0.769</td><td class="n">0.759 ± 0.012 против 0.744</td></tr>
+</tbody>
+</table>
+</div>
+<p>Главное: вывод «модель нужна, усложнение — нет» на расширенных данных стал <strong>статистически однозначным</strong> — выигрыш над медианой теперь в 8 раз больше межфолдового шума. Все 68 тестов проходят. Дальнейший рост — только новые города/сайты, это после защиты.</p>
+
+<h2><span class="tag">Задача 3 · MVP работает</span>Координатор: как упаковать в продукт</h2>
+
+<h3>Что уже работает на демо-диалоге из 45 сообщений</h3>
+<pre>21 карточка с кнопками · precision 1.0 на действенных классах
+сводка: 4 решения, 5 задач, 4 риска, финансы на 322 500 ₽
+
+Напоминания (новое):
+[deadline]       задача из #16 (сантехника): срок — понедельник
+[money_pending]  изменение бюджета на 8 500 ₽ не согласовано (#40)</pre>
+<p class="note">Показательно: напоминание про 8 500 ₽ — не выдумка, в демо-диалоге заказчик действительно не ответил на это сообщение. Система поймала реальную потерянную договорённость.</p>
+
+<h3>Четыре поверхности продукта — все из одного пайплайна</h3>
+<div class="twrap">
+<table>
+<thead><tr><th>Поверхность</th><th>Что делает</th><th>Статус</th></tr></thead>
+<tbody>
+<tr><td><strong>Карточки в чате</strong></td><td>«Обнаружена приёмка этапа» + кнопки; человек подтверждает</td><td>работает</td></tr>
+<tr><td><strong>Дневная сводка</strong></td><td>Вместо 80 сообщений — решения, задачи, риски, деньги</td><td>работает</td></tr>
+<tr><td><strong>Напоминания</strong></td><td>Дедлайны задач, несогласованные деньги, зависшие приёмки</td><td>работает (детерминированно из слотов)</td></tr>
+<tr><td><strong>Протокол проекта</strong></td><td>Журнал подтверждённых решений: «кто что обещал», с датой и ссылкой на сообщение</td><td>= подтверждённые карточки, интерфейсная работа</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Риски — объективно</h3>
+<div class="risk"><b>Шум и раздражение.</b> Главный риск ассистентов в чатах. Защита уже в архитектуре: карточку создают только классы с precision 1.0, сводка — раз в день, напоминание — одно на событие. Ошибается система в сторону молчания, а не спама.</div>
+<div class="risk"><b>Пропуски (recall 0.5 на «информации» ложно-пассивной).</b> Приемлемо: это ассистент, а не замена — пропущенное добавляется руками в один клик. Опасен только ложный флаг, а их ноль.</div>
+<div class="risk"><b>Синтетический корпус.</b> Метрики получены на диалоге, написанном автором. На реальной переписке цифры будут ниже — это записано в отчёте прямо. Реальный корпус появляется только с платформой.</div>
+<div class="risk"><b>Приватность.</b> Переписка — чувствительные данные. Обработка только внутри платформы, никакой отправки во внешние LLM без явного согласия.</div>
+
+<div class="verdict go">
+  <span class="mark">Вердикт: оставить</span>
+  <div><p><strong>Ресурс уже потрачен и окупился:</strong> пайплайн построен на правилах (дёшево), даёт precision 1.0, переиспользуется рейтингом (3 компоненты из 6 считаются из координатора). Тратить ресурс дальше — на нейросетевой NLU — <strong>не нужно</strong>, пока нет реальных переписок: мы уже измерили, что эмбеддинги здесь ухудшают точность (0.822 → 0.756).</p></div>
+</div>
+
+<h2><span class="tag">Задача 4 · спроектировано, ML — сознательно позже</span>Матчинг клиента и подрядчика</h2>
+
+<h3>Прямой ответ на «если ML работает — давай сразу делать»</h3>
+<div class="verdict wait">
+  <span class="mark">ML пока не работает</span>
+  <div><p>Не потому что алгоритмы плохи, а потому что <strong>обучать не на чем</strong>. ML-матчинг учится на исходах пар: «клиент X нанял подрядчика Y → проект завершился хорошо/плохо». Таких пар у нас ноль — платформа не запущена. Любая «модель матчинга», собранная сегодня, будет необучена и непроверяема — ровно то, за что гайд конкурса снижает баллы. Я это проверил и делать имитацию не стал: это то же решение, что с аспектами отзывов и эмбеддингами — <strong>проверил, не выпустил.</strong></p></div>
+</div>
+
+<h3>Что работает уже сегодня: прозрачный скоринг совместимости</h3>
+<p>Матчинг первой версии — не чёрный ящик, а объяснимая формула из данных, которые у нас <strong>уже есть</strong>:</p>
+<div class="twrap">
+<table>
+<thead><tr><th>Фактор</th><th>Откуда данные</th></tr></thead>
+<tbody>
+<tr><td>Жёсткие фильтры: город, типы работ, доступность по срокам</td><td>Профиль подрядчика</td></tr>
+<tr><td><strong>Ценовой сегмент ↔ бюджет клиента</strong></td><td>Уникально: медиана цен подрядчика против рыночного коридора — <strong>из аудита смет</strong>. Мы знаем, кто «эконом», кто «премиум», объективно</td></tr>
+<tr><td>Рейтинг доверия</td><td>Система из задачи 1</td></tr>
+<tr><td>Специализация: доля портфолио в нужных категориях работ</td><td>47 каноничных работ как общий словарь</td></tr>
+</tbody>
+</table>
+</div>
+<p>Каждому кандидату — объяснение: <em>«подходит, потому что: специализация санузлы 8/10 проектов · ценовой сегмент совпадает с бюджетом · рейтинг 87 · свободен с августа»</em>.</p>
+
+<h3>Эволюция к ML — честный путь всех маркетплейсов</h3>
+<pre>Стадия 1 (сейчас)   фильтры + прозрачный скоринг, веса экспертные
+Стадия 2 (запуск)   логируем показы → отклики → сделки → исходы
+Стадия 3 (~50+ сделок)  learning-to-rank на настоящих исходах;
+                    скоринг стадии 1 остаётся baseline, который надо побить</pre>
+<p>Заметь: это в точности схема всего проекта — <strong>сначала простое и проверяемое, сложное только когда данные докажут, что оно нужно.</strong> На защите матчинг подаётся как спроектированная стадия roadmap с уникальной фичей (объективный ценовой сегмент из аудита смет), а не как построенный ML.</p>
+
+<h2><span class="tag">Итог</span>Как четыре ответа складываются в одно</h2>
+<div class="twrap">
+<table>
+<thead><tr><th>Задача</th><th>Статус</th><th>Главное</th></tr></thead>
+<tbody>
+<tr><td>1 · Рейтинг</td><td><strong>Спроектирован</strong></td><td>70% факты сделки / 30% текст; каждая строка кликается до источника; 5 из 6 компонент считаются уже написанным кодом</td></tr>
+<tr><td>2 · Детектор смет</td><td><strong>Улучшен кодом</strong></td><td>+12% данных, +34% видов работ; вывод «модель нужна, усложнение нет» стал статистически однозначным</td></tr>
+<tr><td>3 · Координатор</td><td><strong>MVP + напоминания</strong></td><td>Оставить, ресурс дальше не тратить; риски управляются архитектурой (precision 1.0)</td></tr>
+<tr><td>4 · Матчинг</td><td><strong>Спроектирован, ML позже</strong></td><td>Обучать не на чем — честно в roadmap; уникальная фича: объективный ценовой сегмент подрядчика</td></tr>
+</tbody>
+</table>
+</div>
+<p>Сквозная логика для защиты: <strong>каждый модуль FRAME производит проверенные события, а рейтинг и матчинг превращают эти события в доверие.</strong> Аудит смет даёт ценовую честность, координатор — дисциплину сроков и приёмок, эскроу — факт завершения. Ни один из этих сигналов нельзя купить, как звёзды.</p>
+
+</div>

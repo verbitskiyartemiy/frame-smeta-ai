@@ -1,0 +1,353 @@
+<title>FRAME · питч-дек JMLC 2026</title>
+<style>
+  :root{
+    --bg:#0f1418; --slide:#151b21; --edge:#232c34;
+    --ink:#eef2f5; --soft:#9fadb8; --faint:#6d7c88;
+    --key:#4d9ee0; --ok:#3fb886; --warm:#e08a4a; --bad:#e0685a;
+    --mono:ui-monospace,"Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased}
+
+  .deck{max-width:1180px;margin:0 auto;padding:24px 18px 90px}
+  .bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(8px);padding:12px 4px 14px;margin-bottom:18px;
+    display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    border-bottom:1px solid var(--edge)}
+  .bar h1{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .bar .hint{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-left:auto}
+
+  .slide{aspect-ratio:16/9;background:var(--slide);border:1px solid var(--edge);
+    border-radius:14px;padding:44px 52px;margin-bottom:26px;position:relative;
+    display:flex;flex-direction:column;overflow:hidden}
+  @media (max-width:800px){.slide{aspect-ratio:auto;min-height:auto;padding:28px 24px}}
+  .slide .num{position:absolute;right:22px;bottom:16px;font-family:var(--mono);
+    font-size:11px;color:var(--faint)}
+  .slide .brand{position:absolute;left:52px;top:20px;font-family:var(--mono);
+    font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  @media (max-width:800px){.slide .brand{left:24px}}
+
+  h2{font-size:clamp(24px,3.1vw,38px);font-weight:760;letter-spacing:-.022em;
+    line-height:1.08;margin:26px 0 14px;text-wrap:balance}
+  h2.big{font-size:clamp(30px,4.2vw,52px)}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--key);font-weight:700;margin-top:22px}
+  .sub{font-size:clamp(15px,1.5vw,18px);color:var(--soft);max-width:62ch;line-height:1.5}
+  .grow{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:18px;margin:18px 0}
+  .stat .v{font-family:var(--mono);font-size:clamp(22px,3vw,38px);font-weight:750;
+    color:var(--key);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .stat .v.ok{color:var(--ok)} .stat .v.warm{color:var(--warm)}
+  .stat .l{font-size:13px;color:var(--soft);margin-top:7px;line-height:1.35}
+
+  table{border-collapse:collapse;width:100%;font-size:clamp(12.5px,1.25vw,15px)}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--edge)}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;
+    text-transform:uppercase;color:var(--faint);font-weight:700}
+  tbody tr:last-child td{border-bottom:none}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .win{color:var(--ok);font-weight:700}
+  .lose{color:var(--faint)}
+  .mark{color:var(--warm);font-weight:700}
+
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:14px 0}
+  .step{background:color-mix(in srgb,var(--key) 7%,transparent);
+    border:1px solid var(--edge);border-radius:10px;padding:14px 16px}
+  .step .i{font-family:var(--mono);font-size:11px;color:var(--key);font-weight:700}
+  .step .t{font-size:14.5px;margin-top:6px;line-height:1.4}
+
+  ul{list-style:none;margin:10px 0}
+  li{padding-left:22px;position:relative;margin:9px 0;font-size:clamp(14px,1.4vw,16.5px);
+    line-height:1.45;color:var(--soft)}
+  li::before{content:"";position:absolute;left:2px;top:.62em;width:7px;height:7px;
+    border-radius:2px;background:var(--key)}
+  li b{color:var(--ink);font-weight:670}
+  li.ok::before{background:var(--ok)} li.warm::before{background:var(--warm)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start}
+  @media (max-width:800px){.two{grid-template-columns:1fr;gap:18px}}
+
+  .quote{border-left:3px solid var(--key);padding:12px 0 12px 18px;
+    font-size:clamp(15px,1.6vw,20px);line-height:1.45;color:var(--ink)}
+
+  code{font-family:var(--mono);font-size:.88em;background:color-mix(in srgb,var(--key) 10%,transparent);
+    padding:2px 7px;border-radius:5px;color:var(--ink)}
+  .note{font-size:12.5px;color:var(--faint);margin-top:10px}
+</style>
+
+<div class="deck">
+
+<div class="bar">
+  <h1>FRAME · питч-дек</h1>
+  <span class="hint">12 слайдов · для показа откройте на весь экран (F11)</span>
+</div>
+
+<!-- 1 -->
+<section class="slide">
+  <div class="brand">Junior ML Contest 2026</div>
+  <div class="grow">
+    <div class="kicker">AI-аудитор сметы на ремонт</div>
+    <h2 class="big">FRAME</h2>
+    <p class="sub">Проверяет смету подрядчика по реальным рыночным данным и объясняет каждое замечание со ссылкой на источник.</p>
+    <div class="stats" style="margin-top:32px">
+      <div class="stat"><div class="v">2369</div><div class="l">цен собрано вручную</div></div>
+      <div class="stat"><div class="v">47</div><div class="l">видов работ</div></div>
+      <div class="stat"><div class="v">22</div><div class="l">компании, 7 городов</div></div>
+      <div class="stat"><div class="v ok">68</div><div class="l">тестов, CI зелёный</div></div>
+    </div>
+  </div>
+  <div class="num">1 / 12</div>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="brand">Проблема</div>
+  <div class="grow">
+    <h2>Человек получает смету на 200 000 ₽ и не может её проверить</h2>
+    <div class="stats">
+      <div class="stat"><div class="v warm">88%</div><div class="l">доплачивают сверх сметы</div></div>
+      <div class="stat"><div class="v warm">45%</div><div class="l">столкнулись со срывом сроков</div></div>
+      <div class="stat"><div class="v warm">80%</div><div class="l">воспринимают ремонт как стресс</div></div>
+      <div class="stat"><div class="v">60%</div><div class="l">в моих интервью хотели независимую проверку сметы</div></div>
+    </div>
+    <p class="sub" style="margin-top:14px">Рынок непрозрачен, спросить не у кого, ошибка стоит десятки тысяч. Независимый технадзор стоит 8–15% бюджета — для частного заказчика это дорого.</p>
+  </div>
+  <div class="num">2 / 12</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="brand">Решение · что видит человек</div>
+  <div class="grow">
+    <h2>Вставил смету — увидел, где переплата</h2>
+    <table>
+      <thead><tr><th>Позиция</th><th>Цена</th><th>Рынок P10–P90</th><th>Откл.</th><th>Вердикт</th></tr></thead>
+      <tbody>
+        <tr><td>Укладка плитки на пол</td><td class="n">3 200 ₽</td><td class="n">891 – 2 112 ₽</td><td class="n mark">+182%</td><td class="mark">завышено</td></tr>
+        <tr><td>Штукатурка стен</td><td class="n">520 ₽</td><td class="n">300 – 1 236 ₽</td><td class="n">−1%</td><td class="win">в норме</td></tr>
+        <tr><td>Монтаж телепорта</td><td class="n">50 000 ₽</td><td class="n lose">—</td><td class="n lose">—</td><td class="lose">оценка не даётся</td></tr>
+      </tbody>
+    </table>
+    <div class="stats" style="margin-top:20px">
+      <div class="stat"><div class="v">194 650 ₽</div><div class="l">смета подрядчика</div></div>
+      <div class="stat"><div class="v ok">112 280 ₽</div><div class="l">справедливая оценка рынка</div></div>
+      <div class="stat"><div class="v warm">+82 370 ₽</div><div class="l">переплата</div></div>
+    </div>
+    <p class="note">Третья строка — ключевая: работы нет в базе, и система <b>отказывается оценивать</b> вместо того, чтобы выдумать цену.</p>
+  </div>
+  <div class="num">3 / 12</div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="brand">Данные</div>
+  <div class="grow">
+    <h2>Открытых данных о ценах на ремонт в России не существует. Собрал сам</h2>
+    <div class="flow">
+      <div class="step"><div class="i">01 · СБОР</div><div class="t">Скрапер обошёл прайс-листы <b>24 компаний</b> в 7 городах — 6 391 цена</div></div>
+      <div class="step"><div class="i">02 · КАНОНИКАЛИЗАЦИЯ</div><div class="t">47 regex-правил сводят «плитка напольная» и «облицовка керамогранитом» к одной работе</div></div>
+      <div class="step"><div class="i">03 · ТРИ ФИЛЬТРА</div><div class="t">Распознавание → границы правдоподобия → IQR-выбросы</div></div>
+      <div class="step"><div class="i">04 · ИТОГ</div><div class="t"><b>2 369 чистых цен</b>, 47 работ, 22 компании</div></div>
+    </div>
+    <ul style="margin-top:12px">
+      <li><b>Что EDA сказал о данных:</b> цены логнормальны → обучение на <code>log(price)</code></li>
+      <li>Медианы компаний расходятся в <b>4.8 раза</b> → валидация должна прятать компанию целиком</li>
+      <li>Разброс P90/P10 внутри одной работы — до <b>6.2×</b> → заранее объясняет предел детекции</li>
+    </ul>
+  </div>
+  <div class="num">4 / 12</div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="brand">ML · ключевой эксперимент</div>
+  <div class="grow">
+    <h2>Где моделирование начинает и перестаёт окупаться</h2>
+    <table>
+      <thead><tr><th>Метод (5-fold CV, одни фолды)</th><th>MAPE</th><th>R²</th><th>Вывод</th></tr></thead>
+      <tbody>
+        <tr><td>Глобальная медиана</td><td class="n">95.6 ± 4.4%</td><td class="n">−0.100</td><td class="lose">бесполезно</td></tr>
+        <tr><td>Медиана по виду работы</td><td class="n">43.6 ± 0.6%</td><td class="n">0.695</td><td>честный baseline</td></tr>
+        <tr><td>Медиана по работе + городу</td><td class="n">44.9 ± 1.0%</td><td class="n">0.624</td><td class="mark">хуже: ячейки пустеют</td></tr>
+        <tr><td><b>Линейная регрессия</b></td><td class="n win">38.7 ± 0.6%</td><td class="n win">0.759</td><td class="win">моделирование окупается</td></tr>
+        <tr><td>XGBoost (тюнингованный)</td><td class="n">38.2 ± 0.6%</td><td class="n">0.744</td><td class="lose">усложнение не окупается</td></tr>
+      </tbody>
+    </table>
+    <div class="two" style="margin-top:18px">
+      <ul>
+        <li class="ok"><b>Модель нужна:</b> +4.9 п.п. над медианой при межфолдовом шуме ±0.6</li>
+        <li class="warm"><b>Сложность не нужна:</b> XGBoost выигрывает 0.5 п.п. — меньше шума</li>
+      </ul>
+      <div class="quote">one-hot + логарифм превращают линейную регрессию в мультипликативную модель наценок: <code>базовая × k(работа) × k(город) × k(компания)</code> — ровно так считает живой сметчик</div>
+    </div>
+  </div>
+  <div class="num">5 / 12</div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="brand">Валидация</div>
+  <div class="grow">
+    <h2>Три схемы проверки — и честное название метрики</h2>
+    <div class="two">
+      <div>
+        <table>
+          <thead><tr><th>Схема</th><th>Отвечает на вопрос</th><th>R²</th></tr></thead>
+          <tbody>
+            <tr><td>Случайный сплит</td><td>работает ли вообще</td><td class="n">0.842</td></tr>
+            <tr><td>5-fold CV</td><td>не повезло ли с разбиением</td><td class="n">0.759</td></tr>
+            <tr><td><b>LOCO</b> по 22 компаниям</td><td>справится ли с <i>незнакомой</i> компанией</td><td class="n">0.704</td></tr>
+          </tbody>
+        </table>
+        <p class="note">LOCO: прячу все цены одной компании, учусь на 21 остальной, проверяюсь на спрятанной. Так приходит смета от нового подрядчика в реальности.</p>
+      </div>
+      <div>
+        <div class="stats" style="grid-template-columns:1fr 1fr">
+          <div class="stat"><div class="v ok">0.819</div><div class="l">precision детекции: из 100 флагов ~82 верны</div></div>
+          <div class="stat"><div class="v warm">0.329</div><div class="l">recall: ловим треть — <b>сознательный выбор</b></div></div>
+        </div>
+        <div class="quote" style="margin-top:14px">Метрика согласия 0.87 называется <b>proxy anomaly agreement</b>, а не «точность детекции завышений»: размеченных доказанных завышений в открытых данных не существует.</div>
+      </div>
+    </div>
+  </div>
+  <div class="num">6 / 12</div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="brand">Честные пределы</div>
+  <div class="grow">
+    <h2>Где метод перестаёт работать — и почему это предел данных, а не модели</h2>
+    <div class="two">
+      <div>
+        <div class="stats" style="grid-template-columns:1fr">
+          <div class="stat"><div class="v warm">0.583</div><div class="l">ROC-AUC на синтетических накрутках +25…80%</div></div>
+        </div>
+        <p class="sub" style="margin-top:12px">Разброс цен внутри одной работы на рынке доходит до <b>6.2 раза</b>. Накрутка в 25% тонет внутри него — её не поймает никакая модель, знающая только цену за единицу.</p>
+      </div>
+      <div>
+        <ul>
+          <li class="warm"><b>Это оценка рыночных отклонений</b>, а не детектор мошенничества — нет подтверждённых меток</li>
+          <li class="warm"><b>Прайс-листы — заявленные цены</b>, а не цены сделок</li>
+          <li class="warm"><b>Аспектный рейтинг отзывов сырой</b> (0.513) — проверил и не выпустил</li>
+        </ul>
+        <p class="note">Все три ограничения снимаются одним типом данных — тем, что рождается внутри платформы.</p>
+      </div>
+    </div>
+  </div>
+  <div class="num">7 / 12</div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="brand">Проверка себя</div>
+  <div class="grow">
+    <h2>А может, я просто избегаю сложных моделей?</h2>
+    <p class="sub">Взял две задачи, где сложное <i>должно</i> выиграть, и проверил измерением.</p>
+    <table style="margin-top:14px">
+      <thead><tr><th>Задача</th><th>Простое</th><th>Сложное</th><th>Кто выиграл</th></tr></thead>
+      <tbody>
+        <tr><td>Цена работы (таблица)</td><td class="n">медиана 43.6%</td><td class="n">XGBoost 38.2%</td><td class="mark">простое</td></tr>
+        <tr><td><b>Тональность отзывов (текст)</b></td><td class="n">словарь 0.870</td><td class="n win">трансформер 0.962</td><td class="win">сложное</td></tr>
+        <tr><td>Тип события в переписке</td><td class="n win">правила 0.822</td><td class="n">эмбеддинги 0.689</td><td class="mark">простое</td></tr>
+      </tbody>
+    </table>
+    <div class="quote" style="margin-top:20px">Три измеренных эксперимента. Сложная модель выиграла один раз из трёх — и я применил её ровно там. Я выбираю по данным, а не по моде.</div>
+  </div>
+  <div class="num">8 / 12</div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="brand">AI-стек и архитектура</div>
+  <div class="grow">
+    <h2>LLM объясняет и вызывает инструменты, но не считает деньги</h2>
+    <table>
+      <thead><tr><th>Инструмент агента</th><th>Гарантия</th><th>Статус</th></tr></thead>
+      <tbody>
+        <tr><td><code>get_market_corridor</code></td><td>отказ при неизвестной работе или выборке &lt; 5</td><td class="win">реализован</td></tr>
+        <tr><td><code>check_arithmetic</code></td><td>только детерминированный код — LLM не считает деньги</td><td class="win">реализован</td></tr>
+        <tr><td><code>create_audit_report</code></td><td>у каждого утверждения есть <code>source</code>, флаг <code>all_grounded</code></td><td class="win">реализован</td></tr>
+        <tr><td><code>compare_versions</code></td><td>разделяет добавленное, удалённое, изменённое</td><td class="win">реализован</td></tr>
+        <tr><td><code>search_project_documents</code></td><td>RAG по договору и ТЗ проекта</td><td class="lose">roadmap: нет корпуса</td></tr>
+      </tbody>
+    </table>
+    <ul style="margin-top:14px">
+      <li><b>Стек:</b> scikit-learn · XGBoost · transformers (rubert) · sentence-transformers · MLflow · Docker · GitHub Actions</li>
+      <li><b>Разработка с AI-агентом:</b> Claude Code — планирование, скрапер, эксперименты, критический разбор гипотез. Один разбор закончился отказом от эмбеддингов, когда проверка показала, что regex точнее</li>
+    </ul>
+  </div>
+  <div class="num">9 / 12</div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="brand">Конкуренты</div>
+  <div class="grow">
+    <h2>В России нет AI-native решения для проверки сметы</h2>
+    <table>
+      <thead><tr><th></th><th>Kukun / Handoff (США)</th><th>Классифайды (Авито, Профи)</th><th>Технадзор</th><th class="win">FRAME</th></tr></thead>
+      <tbody>
+        <tr><td>Проверка цен по рынку</td><td>да</td><td class="lose">нет</td><td>вручную</td><td class="win">ML + коридоры</td></tr>
+        <tr><td>Данные по РФ</td><td class="lose">нет</td><td>частично</td><td>экспертные</td><td class="win">2 369 цен, 7 городов</td></tr>
+        <tr><td>Объяснение с источником</td><td>частично</td><td class="lose">нет</td><td>да</td><td class="win">каждое утверждение</td></tr>
+        <tr><td>Отказ при неизвестных данных</td><td class="lose">нет</td><td class="lose">нет</td><td>да</td><td class="win">встроен, покрыт тестом</td></tr>
+        <tr><td>Цена для заказчика</td><td>$$</td><td>бесплатно</td><td class="mark">8–15% бюджета</td><td class="win">790 ₽/мес</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Ближайший аналог по функции — строительный технадзор. Он стоит 8–15% бюджета ремонта; FRAME закрывает ценовую часть его работы за подписку.</p>
+  </div>
+  <div class="num">10 / 12</div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="brand">Что уже сделано · roadmap</div>
+  <div class="grow">
+    <h2>Маховик данных: от холодного старта к тому, что не скопировать</h2>
+    <div class="two">
+      <div>
+        <div class="kicker" style="margin-top:0">Сделано</div>
+        <ul>
+          <li class="ok">Свой датасет: 2 369 цен, 47 работ</li>
+          <li class="ok">Модель + 3 схемы валидации + лестница baseline</li>
+          <li class="ok">6 инструментов агента с гарантиями</li>
+          <li class="ok">MVP координатора чатов: precision 1.0</li>
+          <li class="ok">68 тестов, CI, Docker, MLflow</li>
+        </ul>
+      </div>
+      <div>
+        <div class="kicker" style="margin-top:0">Дальше — на данных платформы</div>
+        <ul>
+          <li><b>Стадия 2:</b> сметы с объёмами → проверка не только цены, но и приписанных объёмов</li>
+          <li><b>Стадия 3:</b> исходы проектов → рейтинг доверия на фактах сделки, а не на звёздах</li>
+          <li><b>Стадия 4:</b> фотоотчёты и споры → детекция дефектов, настоящие метки завышений из арбитража</li>
+        </ul>
+      </div>
+    </div>
+    <div class="quote" style="margin-top:16px">Сметы, исходы и споры рождаются <b>только внутри платформы</b>. Это данные, которых нет в открытом доступе — и в этом защита продукта.</div>
+  </div>
+  <div class="num">11 / 12</div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="brand">Итог</div>
+  <div class="grow">
+    <h2 class="big">Воспроизводимый MVP, который честно знает свои границы</h2>
+    <ul style="margin-top:16px">
+      <li><b>Данных не было</b> — собрал сам, 2 369 цен из 24 источников</li>
+      <li><b>Нашёл обе границы:</b> ниже медианы моделировать бессмысленно, выше линейной — тоже. Показал, где именно</li>
+      <li><b>Сложное применил там, где оно выиграло измерением</b> — один раз из трёх</li>
+      <li><b>Назвал три ограничения сам</b> и показал, какие данные их снимают</li>
+    </ul>
+    <p class="sub" style="margin-top:22px">Артемий Вербицкий · ИТМО · <code>github.com/verbitskiyartemiy/frame-smeta-ai</code></p>
+  </div>
+  <div class="num">12 / 12</div>
+</section>
+
+</div>
