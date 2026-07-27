@@ -128,24 +128,27 @@ def anomaly_eval(df_tr, df_te) -> dict:
 
 
 def loco_anomaly_eval(df) -> tuple:
-    work_q = df.groupby("canonical_work")["price"].agg(
-        lo=lambda s: s.quantile(0.10), hi=lambda s: s.quantile(0.90))
     labels_all, scores_all = [], []
     for company in df["source"].unique():
         train = df[df["source"] != company]
         test = df[df["source"] == company]
         if len(test) < 3:
             continue
+        work_q = train.groupby("canonical_work")["price"].agg(
+            lo=lambda s: s.quantile(0.10), hi=lambda s: s.quantile(0.90))
         model = make_pipe(LinearRegression())
         model.fit(train[FEATURES], np.log(train["price"]))
         tr_resid = np.log(train["price"].to_numpy(float)) - model.predict(train[FEATURES])
         sigma = float(np.std(tr_resid)) or 1e-6
         resid = np.log(test["price"].to_numpy(float)) - model.predict(test[FEATURES])
-        scores_all.append(np.abs(resid) / sigma)
         lo_map = test["canonical_work"].map(work_q["lo"]).to_numpy(float)
         hi_map = test["canonical_work"].map(work_q["hi"]).to_numpy(float)
         p = test["price"].to_numpy(float)
-        labels_all.append(((p < lo_map) | (p > hi_map)).astype(int))
+        known = ~(np.isnan(lo_map) | np.isnan(hi_map))
+        if not known.any():
+            continue
+        scores_all.append((np.abs(resid) / sigma)[known])
+        labels_all.append(((p < lo_map) | (p > hi_map)).astype(int)[known])
 
     labels = np.concatenate(labels_all)
     scores = np.concatenate(scores_all)
@@ -331,12 +334,16 @@ def main():
     significant = cv_best["MAPE"][0] < mape_lin - std_lin
     winner = "xgboost_tuned" if significant else "linear"
     results["chosen_model"] = winner
+    gain = round(mape_lin - cv_best["MAPE"][0], 1)
     results["model_choice_reason"] = (
-        "Линейная регрессия выбрана как продакшн-модель: по кросс-валидации она "
-        "точнее по R² и стабильнее, а преимущество тюнингованного XGBoost по MAPE "
-        "(0.8 п.п.) меньше разброса между фолдами (1.4 п.п.), т.е. статистически "
-        "незначимо. Признаки чисто категориальные с аддитивными эффектами в "
-        "лог-цене — на такой структуре бустинг не даёт выигрыша."
+        f"Линейная регрессия выбрана как продакшн-модель: по кросс-валидации она "
+        f"точнее по R² ({cv_lin['R2'][0]} против {cv_best['R2'][0]}), а преимущество "
+        f"тюнингованного XGBoost по MAPE ({gain} п.п.) меньше межфолдового разброса "
+        f"({std_lin} п.п.) — по заранее заданному правилу простоты берём линейную. "
+        f"Это инженерная эвристика, а не статистический тест: тюнинг и сравнение "
+        f"шли на одних и тех же фолдах, nested CV не проводился. Признаки чисто "
+        f"категориальные с аддитивными эффектами в лог-цене — на такой структуре "
+        f"бустинг не даёт выигрыша."
     )
     print(f"  -> ПОБЕДИТЕЛЬ: {winner} (простая модель — при равной точности)")
 
@@ -354,9 +361,15 @@ def main():
     real_an, real_labels, real_scores = loco_anomaly_eval(df)
     plot_roc_pr(real_labels, real_scores,
                 os.path.join(fig_dir, "09_anomaly_real_roc_pr.png"), None,
-                label="РЕАЛЬНАЯ проверка: рыночные выбросы (leave-one-company-out)")
-    results["anomaly_real_loco"] = real_an
-    print(f"\n[anomaly РЕАЛЬНАЯ/LOCO] ROC-AUC={real_an['ROC_AUC']}  "
+                label="Proxy anomaly agreement: остатки модели vs рыночные коридоры (LOCO)")
+    real_an["metric_meaning"] = (
+        "Согласие двух независимых прокси-признаков экстремальной цены: остаток "
+        "линейной модели, не видевшей компанию, и коридор P10-P90, посчитанный "
+        "только на train этого фолда. Это НЕ детекция мошенничества и не "
+        "размеченные завышения — таких меток в открытых данных нет."
+    )
+    results["anomaly_proxy_agreement_loco"] = real_an
+    print(f"\n[proxy agreement/LOCO] ROC-AUC={real_an['ROC_AUC']}  "
           f"AP={real_an['average_precision']}  precision={real_an['precision']}  "
           f"recall={real_an['recall']}  "
           f"(реальных рыночных выбросов {real_an['n_real_anomalies']}/{real_an['n_test']})")
