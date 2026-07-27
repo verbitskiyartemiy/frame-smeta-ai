@@ -18,6 +18,10 @@ wandb/
 *.pkl
 *.joblib
 
+# Secrets
+.env
+*.key
+
 # Runtime
 gradio.log
 

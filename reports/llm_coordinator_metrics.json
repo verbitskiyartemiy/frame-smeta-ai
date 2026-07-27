@@ -1,0 +1,174 @@
+{
+  "run_mode": "LIVE",
+  "corpus": {
+    "path": "data/demo/chat_dialog.json",
+    "n_messages": 45,
+    "origin": "synthetic",
+    "warning": "Диалог написан и размечен автором проекта и использовался при разработке промпта. Это проверка работоспособности пайплайна, а НЕ оценка качества production-системы. Для честной оценки нужен независимый корпус реальных переписок, которого вне платформы не существует."
+  },
+  "rule_based_baseline": {
+    "n_events": 21,
+    "exact_pair": {
+      "precision": 1.0,
+      "recall": 0.724,
+      "f1": 0.84,
+      "tp": 21,
+      "fp": 0,
+      "fn": 8
+    }
+  },
+  "llm_coordinator": {
+    "n_events": 13,
+    "exact_pair": {
+      "precision": 0.667,
+      "recall": 0.345,
+      "f1": 0.455,
+      "tp": 10,
+      "fp": 5,
+      "fn": 19
+    },
+    "message_level": {
+      "precision": 0.933,
+      "recall": 0.483,
+      "f1": 0.636
+    },
+    "source_grounding_rate": 1.0,
+    "hallucinated_events": 0,
+    "missed": [
+      [
+        3,
+        "acceptance_request"
+      ],
+      [
+        4,
+        "decision"
+      ],
+      [
+        7,
+        "question"
+      ],
+      [
+        9,
+        "decision"
+      ],
+      [
+        11,
+        "question"
+      ],
+      [
+        12,
+        "decision"
+      ],
+      [
+        14,
+        "question"
+      ],
+      [
+        16,
+        "task"
+      ],
+      [
+        18,
+        "budget_change"
+      ],
+      [
+        20,
+        "risk"
+      ],
+      [
+        26,
+        "task"
+      ],
+      [
+        28,
+        "question"
+      ],
+      [
+        31,
+        "budget_change"
+      ],
+      [
+        32,
+        "question"
+      ],
+      [
+        33,
+        "acceptance_request"
+      ],
+      [
+        34,
+        "decision"
+      ],
+      [
+        39,
+        "decision"
+      ],
+      [
+        40,
+        "budget_change"
+      ],
+      [
+        44,
+        "risk"
+      ]
+    ],
+    "spurious": [
+      [
+        7,
+        "decision"
+      ],
+      [
+        9,
+        "budget_change"
+      ],
+      [
+        20,
+        "decision"
+      ],
+      [
+        28,
+        "task"
+      ],
+      [
+        41,
+        "task"
+      ]
+    ]
+  },
+  "budget_approval_linkage": {
+    "n_budget_events_in_gold": 4,
+    "found_by_llm": 1,
+    "approval_correct": 1,
+    "approval_accuracy_on_found": 1.0,
+    "rules_can_do_this": false,
+    "note": "Rule-based baseline такую задачу не решает в принципе: он проверяет лишь наличие ЛЮБОГО последующего сообщения класса «решение» и не связывает согласие с конкретной суммой.",
+    "detail": [
+      {
+        "amount": 34000,
+        "gold_approved": true,
+        "llm_approved": true,
+        "correct": true,
+        "source_message_ids": [
+          8,
+          9
+        ],
+        "verdict": "верно"
+      },
+      {
+        "amount": 12000,
+        "gold_approved": true,
+        "verdict": "не найдено"
+      },
+      {
+        "amount": 246000,
+        "gold_approved": false,
+        "verdict": "не найдено"
+      },
+      {
+        "amount": 8500,
+        "gold_approved": false,
+        "verdict": "не найдено"
+      }
+    ]
+  }
+}
