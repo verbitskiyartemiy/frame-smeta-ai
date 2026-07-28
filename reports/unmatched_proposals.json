@@ -1,0 +1,31 @@
+{
+ "n_labelled": 2858,
+ "n_unmatched": 1765,
+ "proposals_by_threshold": {
+  "0.4": {
+   "n": 41,
+   "share": 0.023
+  },
+  "0.5": {
+   "n": 12,
+   "share": 0.007
+  },
+  "0.6": {
+   "n": 5,
+   "share": 0.003
+  },
+  "0.7": {
+   "n": 3,
+   "share": 0.002
+  },
+  "0.8": {
+   "n": 0,
+   "share": 0.0
+  },
+  "0.9": {
+   "n": 0,
+   "share": 0.0
+  }
+ },
+ "sample_file": "unmatched_proposals.csv"
+}
