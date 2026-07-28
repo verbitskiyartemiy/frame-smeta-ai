@@ -271,9 +271,9 @@ def test_assistant_reports_failure_without_inventing(client):
     assert response.get_json()["answered"] is False
 
 
-KNOW = [{"stage": "Электромонтаж", "kind": "документы",
+KNOW = [{"id": "elec-docs", "stage": "Электромонтаж", "kind": "документы",
          "text": "До оплаты этапа запрашивают акт скрытых работ и фотофиксацию трасс."},
-        {"stage": "Стяжка пола", "kind": "порядок",
+        {"id": "screed-order", "stage": "Стяжка пола", "kind": "порядок",
          "text": "Цементной стяжке нужно около четырёх недель до укладки покрытия."}]
 
 
@@ -285,6 +285,7 @@ def _with_knowledge(reply, fragments=KNOW):
 
 def test_assistant_proposes_action_for_confirmation(client):
     reply = {"answered": True, "source_ids": [2],
+             "knowledge_source_ids": ["elec-docs"],
              "answer": "Перед приёмкой запросите акт скрытых работ.",
              "proposed_action": {"title": "Запросить акт скрытых работ",
                                  "why": "без него состав работ не доказать"}}
@@ -298,14 +299,17 @@ def test_assistant_proposes_action_for_confirmation(client):
     assert body["proposed_action"]["title"] == "Запросить акт скрытых работ"
     assert body["proposed_action"]["status"] == "pending", (
         "действие остаётся предложением до подтверждения человеком")
-    assert body["knowledge_used"] == ["Электромонтаж", "Стяжка пола"]
+    assert body["knowledge_used"] == ["Электромонтаж"]
+    assert body["knowledge_source_ids"] == ["elec-docs"]
+    assert body["knowledge_quotes"] == [KNOW[0]["text"]]
 
 
 def test_assistant_allows_numbers_taken_from_knowledge(client):
     """Число из базы знаний — законный источник, а не выдумка."""
-    fragments = [{"stage": "Стяжка пола", "kind": "порядок",
+    fragments = [{"id": "screed-order", "stage": "Стяжка пола", "kind": "порядок",
                   "text": "Цементной стяжке нужно около 28 дней до укладки покрытия."}]
-    reply = {"answered": True, "source_ids": [1],
+    reply = {"answered": True, "source_ids": [],
+             "knowledge_source_ids": ["screed-order"],
              "answer": "Плитку кладут через 28 дней после заливки стяжки.",
              "proposed_action": {"title": "", "why": ""}}
 
@@ -316,11 +320,14 @@ def test_assistant_allows_numbers_taken_from_knowledge(client):
                                  "facts": FACTS}).get_json()
 
     assert body["answered"] is True, "28 взято из знаний, это не выдуманное число"
+    assert body["source_ids"] == []
+    assert body["knowledge_source_ids"] == ["screed-order"]
     assert body["proposed_action"] is None, "пустой заголовок — действия нет"
 
 
 def test_assistant_rejects_number_absent_from_both_sources(client):
     reply = {"answered": True, "source_ids": [1],
+             "knowledge_source_ids": [],
              "answer": "Готовность проекта 87 процентов.",
              "proposed_action": {"title": "", "why": ""}}
     search_patch, llm_patch = _with_knowledge(reply)

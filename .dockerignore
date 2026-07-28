@@ -10,3 +10,5 @@ gradio.log
 reports/figures/
 data/raw/
 data/real/
+frontend/node_modules/
+frontend/dist/

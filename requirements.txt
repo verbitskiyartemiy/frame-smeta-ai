@@ -6,6 +6,7 @@ seaborn>=0.13
 xgboost>=2.0
 mlflow>=2.11
 gradio>=6.0
+flask>=3.0
 lxml>=5.0
 beautifulsoup4>=4.12
 requests>=2.31
