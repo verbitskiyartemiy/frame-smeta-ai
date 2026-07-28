@@ -1,0 +1,48 @@
+{
+ "model": "paraphrase-multilingual-MiniLM-L12-v2",
+ "svd_dims": 64,
+ "n_rows": 2369,
+ "results": {
+  "median_by_work": {
+   "MAPE": [
+    43.5,
+    9.9
+   ],
+   "R2": 0.651,
+   "n_folds": 22
+  },
+  "categorical": {
+   "MAPE": [
+    44.0,
+    10.9
+   ],
+   "R2": 0.705,
+   "n_folds": 22
+  },
+  "text_only_embeddings": {
+   "MAPE": [
+    79.1,
+    35.9
+   ],
+   "R2": 0.25,
+   "n_folds": 22
+  },
+  "categorical_plus_embeddings": {
+   "MAPE": [
+    43.2,
+    11.9
+   ],
+   "R2": 0.685,
+   "n_folds": 22
+  },
+  "categorical_plus_char_ngrams": {
+   "MAPE": [
+    42.9,
+    15.1
+   ],
+   "R2": 0.642,
+   "n_folds": 22
+  }
+ },
+ "verdict": "Текстовые признаки дают +0.60 п.п. MAPE против медианы по виду работы при межфолдовом разбросе 9.9 п.п. Выигрыш не превышает разброс между компаниями — сигнала недостаточно."
+}

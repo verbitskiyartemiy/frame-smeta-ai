@@ -1,0 +1,86 @@
+{
+ "oracle_ceiling": [
+  {
+   "features": "глобальная медиана",
+   "oracle_mape": 95.5,
+   "cells": 1,
+   "median_rows_per_cell": 2369
+  },
+  {
+   "features": "вид работы",
+   "oracle_mape": 41.7,
+   "cells": 47,
+   "median_rows_per_cell": 33.0
+  },
+  {
+   "features": "вид + город",
+   "oracle_mape": 37.3,
+   "cells": 278,
+   "median_rows_per_cell": 5.0
+  },
+  {
+   "features": "вид + город + единица",
+   "oracle_mape": 33.7,
+   "cells": 460,
+   "median_rows_per_cell": 3.0
+  },
+  {
+   "features": "вид + город + единица + компания",
+   "oracle_mape": 26.1,
+   "cells": 801,
+   "median_rows_per_cell": 2.0
+  }
+ ],
+ "learning_curve": [
+  {
+   "train_companies": 3,
+   "train_rows_median": 276,
+   "model_mape": 52.2,
+   "median_mape": 54.2,
+   "gap_pp": 2.02
+  },
+  {
+   "train_companies": 6,
+   "train_rows_median": 552,
+   "model_mape": 47.9,
+   "median_mape": 47.6,
+   "gap_pp": -0.25
+  },
+  {
+   "train_companies": 9,
+   "train_rows_median": 828,
+   "model_mape": 45.4,
+   "median_mape": 44.5,
+   "gap_pp": -0.85
+  },
+  {
+   "train_companies": 12,
+   "train_rows_median": 1104,
+   "model_mape": 45.0,
+   "median_mape": 45.1,
+   "gap_pp": 0.08
+  },
+  {
+   "train_companies": 15,
+   "train_rows_median": 1380,
+   "model_mape": 44.5,
+   "median_mape": 44.2,
+   "gap_pp": -0.3
+  },
+  {
+   "train_companies": 18,
+   "train_rows_median": 1656,
+   "model_mape": 44.1,
+   "median_mape": 43.6,
+   "gap_pp": -0.44
+  },
+  {
+   "train_companies": 21,
+   "train_rows_median": 1932,
+   "model_mape": 44.0,
+   "median_mape": 43.5,
+   "gap_pp": -0.43
+  }
+ ],
+ "verdict": "Разрыв модель-минус-медиана при 3 компаниях +2.02 п.п., при 21 компаниях -0.43 п.п. Преимущество не растёт с объёмом: узкое место не количество строк, а состав признаков."
+}
