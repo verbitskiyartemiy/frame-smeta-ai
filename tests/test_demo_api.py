@@ -1,5 +1,6 @@
 """Тесты HTTP-границы демо. Сеть не используется: LLM подменяется заглушкой."""
 
+import json
 import random
 from unittest import mock
 
@@ -185,3 +186,85 @@ def test_simulate_rejects_empty_payload(client):
     assert client.post("/api/simulate/reply",
                        json={"messages": [{"author": "Вы", "text": "   "}]}
                        ).status_code == 400
+
+
+FACTS = [
+    {"id": 1, "text": "Бюджет проекта 2 850 000 руб, потрачено 1 767 000 руб."},
+    {"id": 2, "text": "Подрядчик Игорь обещал закончить электрику до 18 мая."},
+    {"id": 3, "text": "Согласована доплата 12 000 руб за полную замену проводки."},
+]
+
+
+def _llm_returning(payload):
+    return lambda *a, **k: json.dumps(payload, ensure_ascii=False)
+
+
+def test_assistant_answers_with_sources(client):
+    reply = {"answered": True, "source_ids": [1],
+             "answer": "Потрачено 1 767 000 руб из бюджета 2 850 000 руб."}
+    with mock.patch.object(hybrid_coordinator, "call_llm", _llm_returning(reply)):
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Сколько потрачено?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is True
+    assert body["source_ids"] == [1]
+    assert body["quotes"] == [FACTS[0]["text"]]
+
+
+def test_assistant_rejects_invented_numbers(client):
+    """Сумма, которой нет в источнике, не должна доехать до пользователя."""
+    reply = {"answered": True, "source_ids": [1],
+             "answer": "Потрачено 1 767 000 руб, остаток 1 083 000 руб."}
+    with mock.patch.object(hybrid_coordinator, "call_llm", _llm_returning(reply)):
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Сколько осталось?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is False
+    assert not body["answer"]
+    assert "1083000" in body["reason"]
+
+
+def test_assistant_rejects_unknown_fact_reference(client):
+    reply = {"answered": True, "source_ids": [99],
+             "answer": "Об этом написано в документах проекта."}
+    with mock.patch.object(hybrid_coordinator, "call_llm", _llm_returning(reply)):
+        body = client.post("/api/assistant/ask",
+                           json={"question": "А что по гарантии?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is False
+    assert not body["answer"]
+
+
+def test_assistant_admits_missing_data(client):
+    reply = {"answered": False, "source_ids": [], "answer": "",
+             "reason": "в фактах проекта нет информации о гарантии"}
+    with mock.patch.object(hybrid_coordinator, "call_llm", _llm_returning(reply)):
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Какая гарантия?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is False
+    assert "гаранти" in body["reason"].lower()
+
+
+def test_assistant_requires_question_and_facts(client):
+    assert client.post("/api/assistant/ask",
+                       json={"facts": FACTS}).status_code == 400
+    assert client.post("/api/assistant/ask",
+                       json={"question": "Сколько?"}).status_code == 400
+
+
+def test_assistant_reports_failure_without_inventing(client):
+    def broken_llm(*_args, **_kwargs):
+        raise RuntimeError("LLM недоступна")
+
+    with mock.patch.object(hybrid_coordinator, "call_llm", broken_llm):
+        response = client.post("/api/assistant/ask",
+                               json={"question": "Сколько потрачено?",
+                                     "facts": FACTS})
+
+    assert response.status_code == 502
+    assert response.get_json()["answered"] is False
