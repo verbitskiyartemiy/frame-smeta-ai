@@ -1,6 +1,10 @@
 <title>FRAME · AI-слой · блок слайдов</title>
 
 <style>
+  /* Кадр слайда жёстко 1920x1080, поэтому отступы обязаны входить в высоту,
+     иначе низ уезжает за границу и обрезается при экспорте. */
+  *, *::before, *::after { box-sizing: border-box; }
+
   :root {
     --blue: #1F6FEB;
     --blue-deep: #0B3D91;
@@ -68,7 +72,7 @@
     height: 1080px;
     transform-origin: top left;
     scale: calc(100cqw / 1920);
-    padding: 76px 84px 68px;
+    padding: 60px 76px 52px;
     display: flex;
     flex-direction: column;
     background-image:
@@ -90,8 +94,8 @@
 
   .badge {
     position: absolute;
-    top: 54px;
-    right: 76px;
+    top: 40px;
+    right: 68px;
     font-size: 22px;
     font-weight: 800;
     letter-spacing: .04em;
@@ -103,13 +107,13 @@
   }
 
   h1 {
-    font-size: 74px;
+    font-size: 64px;
     font-weight: 800;
     letter-spacing: -.02em;
-    line-height: .98;
+    line-height: 1.0;
     text-transform: uppercase;
     color: var(--blue);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   h1 .thin { color: var(--ink); }
@@ -120,24 +124,24 @@
     letter-spacing: .18em;
     text-transform: uppercase;
     color: var(--ink-3);
-    margin-bottom: 16px;
+    margin-bottom: 11px;
   }
 
   .lede {
-    font-size: 27px;
+    font-size: 24px;
     line-height: 1.4;
     color: var(--ink-2);
     max-width: 1360px;
-    margin-bottom: 34px;
+    margin-bottom: 22px;
   }
 
   .lede b { color: var(--ink); font-weight: 700; }
 
   .footnote {
     margin-top: auto;
-    padding-top: 22px;
+    padding-top: 15px;
     border-top: 2px solid var(--line);
-    font-size: 18px;
+    font-size: 17px;
     color: var(--ink-3);
     display: flex;
     justify-content: space-between;
@@ -273,13 +277,13 @@
   .vs-card {
     border: 2px solid var(--line);
     border-radius: 18px;
-    padding: 28px 30px;
+    padding: 22px 26px;
     background: #fff;
   }
 
   .vs-card.hero { border-color: var(--blue); background: var(--blue-wash); }
 
-  .vs-label { font-size: 20px; font-weight: 700; color: var(--ink-2); margin-bottom: 16px; }
+  .vs-label { font-size: 19px; font-weight: 700; color: var(--ink-2); margin-bottom: 12px; }
 
   .vs-row {
     display: flex;
@@ -292,45 +296,45 @@
   .vs-row + .vs-row { border-top: 2px solid rgba(0,0,0,.06); }
 
   .vs-who { font-size: 19px; color: var(--ink-3); }
-  .vs-num { font-family: var(--mono); font-size: 34px; font-weight: 700; }
+  .vs-num { font-family: var(--mono); font-size: 30px; font-weight: 700; }
   .vs-num.weak { color: var(--ink-3); }
   .vs-num.strong { color: var(--blue-deep); }
   .vs-num.zero { color: var(--red); }
 
-  .vs-note { margin-top: 16px; font-size: 19px; line-height: 1.4; color: var(--ink-2); }
+  .vs-note { margin-top: 12px; font-size: 18px; line-height: 1.4; color: var(--ink-2); }
 
   /* ---------- лестница baseline ---------- */
-  .ladder { display: flex; flex-direction: column; gap: 12px; }
+  .ladder { display: flex; flex-direction: column; gap: 7px; }
 
   .rung {
     display: grid;
-    grid-template-columns: 420px 1fr 150px;
+    grid-template-columns: 400px 1fr 130px;
     align-items: center;
-    gap: 22px;
+    gap: 18px;
   }
 
-  .rung-name { font-size: 23px; color: var(--ink-2); }
+  .rung-name { font-size: 20px; color: var(--ink-2); }
   .rung-name b { color: var(--ink); }
 
-  .bar-track { height: 34px; background: var(--wash); border-radius: 6px; overflow: hidden; }
+  .bar-track { height: 26px; background: var(--wash); border-radius: 6px; overflow: hidden; }
   .bar { height: 100%; background: var(--ink-3); border-radius: 6px; }
   .bar.win { background: var(--green); }
   .bar.lose { background: var(--blue); }
 
-  .rung-num { font-family: var(--mono); font-size: 26px; font-weight: 700; text-align: right; }
+  .rung-num { font-family: var(--mono); font-size: 23px; font-weight: 700; text-align: right; }
 
   /* ---------- петля ---------- */
   .loop { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; flex: 1; }
 
-  .loop-list { display: flex; flex-direction: column; gap: 14px; }
+  .loop-list { display: flex; flex-direction: column; gap: 10px; }
 
   .loop-item {
     display: grid;
     grid-template-columns: 46px 1fr;
-    gap: 18px;
+    gap: 16px;
     align-items: start;
     border-bottom: 2px solid var(--line);
-    padding-bottom: 13px;
+    padding-bottom: 9px;
   }
 
   .loop-n {
@@ -340,7 +344,7 @@
     display: flex; align-items: center; justify-content: center;
   }
 
-  .loop-what { font-size: 24px; font-weight: 700; }
+  .loop-what { font-size: 22px; font-weight: 700; }
   .loop-label { font-size: 19px; color: var(--blue-deep); font-family: var(--mono); }
 
   .panel {
@@ -360,27 +364,118 @@
   .panel .rule { height: 2px; background: rgba(255,255,255,.18); }
 
   /* ---------- эффект ---------- */
-  .effect { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  .effect { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
   .fx {
     border-left: 5px solid var(--blue);
     background: var(--wash);
-    padding: 22px 26px;
+    padding: 16px 22px;
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
 
-  .fx-num { font-family: var(--mono); font-size: 40px; font-weight: 700; color: var(--blue-deep); line-height: 1; }
+  .fx-num { font-family: var(--mono); font-size: 34px; font-weight: 700; color: var(--blue-deep); line-height: 1; }
   .fx-text { font-size: 21px; line-height: 1.4; color: var(--ink-2); }
   .fx-text b { color: var(--ink); }
+
+  /* ---------- корпус: полоса чисел ---------- */
+  .corpus-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 26px;
+    padding: 16px 0 18px;
+    border-top: 2px solid var(--line);
+    border-bottom: 2px solid var(--line);
+    margin-bottom: 22px;
+  }
+
+  .cs { display: flex; flex-direction: column; gap: 4px; }
+  .cs-n { font-family: var(--mono); font-size: 38px; font-weight: 700; line-height: 1; color: var(--blue-deep); }
+  .cs-l { font-size: 20px; color: var(--ink-2); }
+
+  .wide-split { display: grid; grid-template-columns: 1fr 1.05fr; gap: 54px; }
+  .two-proofs { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 40px; }
+
+  /* ---------- цепочка шагов ---------- */
+  .chain { display: flex; flex-direction: column; gap: 11px; }
+
+  .chain-step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 16px;
+    align-items: start;
+    font-size: 20px;
+    line-height: 1.35;
+    color: var(--ink-2);
+  }
+
+  .chain-step b { color: var(--ink); }
+
+  .chain-n {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--blue); color: #fff;
+    font-size: 19px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- табло ---------- */
+  .scoreboard { border: 2px solid var(--line); border-radius: 16px; overflow: hidden; }
+
+  .sb-head, .sb-row {
+    display: grid;
+    grid-template-columns: 1fr 125px 125px;
+    align-items: center;
+    padding: 10px 20px;
+  }
+
+  .sb-head {
+    background: var(--ink);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .sb-head span:not(:first-child) { text-align: right; }
+
+  .sb-row + .sb-row { border-top: 2px solid var(--line); }
+  .sb-name { font-size: 20px; color: var(--ink-2); }
+  .sb-v {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--ink);
+  }
+  .sb-v.win { color: var(--green); }
+  .sb-v.weak { color: var(--ink-3); }
+
+  /* ---------- честные оговорки ---------- */
+  .honesty { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; }
+
+  .hon {
+    border-left: 5px solid var(--blue);
+    background: var(--wash);
+    padding: 16px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .hon-stop { border-left-color: var(--amber); background: var(--amber-wash); }
+
+  .hon-title { font-size: 22px; font-weight: 800; }
+  .hon-text { font-size: 18px; line-height: 1.35; color: var(--ink-2); }
+  .hon-text b { color: var(--ink); }
 
   /* ---------- закрытые возражения ---------- */
   .closed {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 26px;
-    margin-top: 26px;
+    gap: 24px;
+    margin-top: 18px;
   }
 
   .closed-item {
@@ -402,7 +497,7 @@
     padding-bottom: 12px; border-bottom: 2px solid var(--line); margin-bottom: 20px;
   }
 
-  .did { display: flex; flex-direction: column; gap: 16px; }
+  .did { display: flex; flex-direction: column; gap: 12px; }
   .did-item { display: grid; grid-template-columns: 60px 1fr; gap: 16px; }
   .did-n { font-family: var(--mono); font-size: 20px; color: var(--blue); font-weight: 700; }
   .did-t { font-size: 24px; font-weight: 700; }
@@ -564,32 +659,58 @@
         </div>
       </div>
 
-      <div class="versus">
+      <div class="two-proofs">
         <div class="vs-card hero">
-          <div class="vs-label">Связать несколько реплик в одно событие</div>
-          <div class="vs-row"><span class="vs-who">правила</span><span class="vs-num zero">0.000</span></div>
-          <div class="vs-row"><span class="vs-who">гибрид</span><span class="vs-num strong">0.82</span></div>
-          <p class="vs-note">Правила этого не умеют вообще: сумму называет подрядчик, а согласие приходит через три сообщения.</p>
+          <div class="vs-label">Чего правила не умеют вообще</div>
+          <div class="vs-row">
+            <span class="vs-who">связать реплики — правила</span>
+            <span class="vs-num zero">0.000</span>
+          </div>
+          <div class="vs-row">
+            <span class="vs-who">связать реплики — гибрид</span>
+            <span class="vs-num strong">0.82</span>
+          </div>
+          <p class="vs-note">
+            Сумму называет подрядчик, а согласие приходит через три сообщения.
+            Правила видят их как два разных события — и не могут иначе.
+            <b>Ради этого здесь и стоит LLM.</b>
+          </p>
         </div>
 
-        <div class="vs-card">
-          <div class="vs-label">Найти событие</div>
-          <div class="vs-row"><span class="vs-who">правила, F1</span><span class="vs-num weak">0.73</span></div>
-          <div class="vs-row"><span class="vs-who">гибрид, F1</span><span class="vs-num strong">0.95</span></div>
-          <p class="vs-note">Разброс по трём живым прогонам — ноль.</p>
-        </div>
-
-        <div class="vs-card">
-          <div class="vs-label">Понять статус согласования</div>
-          <div class="vs-row"><span class="vs-who">правила</span><span class="vs-num weak">0.33</span></div>
-          <div class="vs-row"><span class="vs-who">гибрид</span><span class="vs-num strong">0.90</span></div>
-          <p class="vs-note">Доля событий со ссылкой на источник — 1.00 у обоих.</p>
+        <div>
+          <div class="col-head">Держится ли при росте объёма</div>
+          <div class="scoreboard">
+            <div class="sb-head">
+              <span></span><span>45 сообщ.</span><span>326 сообщ.</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Детекция событий, F1</span>
+              <span class="sb-v">0.95</span><span class="sb-v win">0.800</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Найдено реальных событий</span>
+              <span class="sb-v">1.00</span><span class="sb-v win">0.875</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Сумма доплаты извлечена</span>
+              <span class="sb-v">1.00</span><span class="sb-v win">0.895</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Событий со ссылкой на источник</span>
+              <span class="sb-v">1.00</span><span class="sb-v win">1.000</span>
+            </div>
+          </div>
+          <p class="vs-note" style="margin-top:14px">
+            При семикратном росте объёма качество просело, но не рухнуло.
+            Привязка к источнику держится на единице — <b>вывод без ссылки
+            на сообщение не выпускается никогда</b>.
+          </p>
         </div>
       </div>
 
       <div class="footnote">
-        <span>Корпус <b>синтетический</b>: 45 сообщений, размечены автором. Следующий шаг — обезличенные реальные чаты и независимая разметка</span>
-        <span><b>34.5 ± 1.1 с</b> на 45 сообщений</span>
+        <span>Корпус синтетический. На большом разметка задаётся спецификацией <b>в коде до генерации текста</b> — модель её не составляет. Дальше: обезличенные реальные чаты с независимой разметкой</span>
+        <span><b>50 диалогов · 326 сообщений</b></span>
       </div>
     </div>
   </div>
@@ -633,7 +754,7 @@
         </div>
       </div>
 
-      <div style="height:26px"></div>
+      <div style="height:14px"></div>
 
       <div class="versus">
         <div class="vs-card hero" style="grid-column: span 2">
@@ -823,6 +944,109 @@
       <div class="footnote">
         <span>Отрицательный результат с честной валидацией стоит дороже выпущенной модели без неё</span>
         <span><b>Счёт 1 : 2 в пользу простого</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 7 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Запасной слайд · для вопросов о синтетике</div>
+      <h1>45 → 326 сообщений<span class="thin">, и две метрики я не заявляю</span></h1>
+
+      <div class="corpus-strip">
+        <div class="cs"><span class="cs-n">50</span><span class="cs-l">диалогов из 90 попыток</span></div>
+        <div class="cs"><span class="cs-n">326</span><span class="cs-l">сообщений</span></div>
+        <div class="cs"><span class="cs-n">32</span><span class="cs-l">размеченных события</span></div>
+        <div class="cs"><span class="cs-n">18</span><span class="cs-l">диалогов без событий</span></div>
+      </div>
+
+      <div class="wide-split">
+        <div>
+          <div class="col-head">Как разорван замкнутый круг</div>
+          <p style="font-size:20px;line-height:1.4;color:var(--ink-2);margin-bottom:14px">
+            Сгенерировать диалоги моделью и ей же их разметить — значит измерить,
+            согласна ли модель сама с собой.
+          </p>
+          <div class="chain">
+            <div class="chain-step">
+              <div class="chain-n">1</div>
+              <div><b>Спецификация в коде.</b> Тип события, сумма, статус,
+                есть ли согласие — решает обычный генератор случайных чисел</div>
+            </div>
+            <div class="chain-step">
+              <div class="chain-n">2</div>
+              <div><b>Модель пишет текст</b> под эти условия и не знает,
+                что будет измеряться</div>
+            </div>
+            <div class="chain-step">
+              <div class="chain-n">3</div>
+              <div><b>Позиции ищутся точным совпадением строки.</b> Образец,
+                где сумма или фраза встречается дважды, отбрасывается</div>
+            </div>
+          </div>
+          <p style="font-size:20px;line-height:1.4;color:var(--ink);margin-top:12px">
+            Модель <b>ни разу ничего не размечает</b>.
+          </p>
+        </div>
+
+        <div>
+          <div class="col-head">Что измерено достоверно</div>
+          <div class="scoreboard">
+            <div class="sb-head"><span></span><span>правила</span><span>гибрид</span></div>
+            <div class="sb-row">
+              <span class="sb-name">Детекция событий, F1</span>
+              <span class="sb-v weak">0.545</span><span class="sb-v win">0.800</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Найдено реальных событий</span>
+              <span class="sb-v weak">0.375</span><span class="sb-v win">0.875</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Сумма доплаты извлечена</span>
+              <span class="sb-v weak">0.105</span><span class="sb-v win">0.895</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Событий со ссылкой на источник</span>
+              <span class="sb-v">1.000</span><span class="sb-v">1.000</span>
+            </div>
+            <div class="sb-row">
+              <span class="sb-name">Лишних карточек на тихую переписку</span>
+              <span class="sb-v win">0.000</span><span class="sb-v weak">0.280</span>
+            </div>
+          </div>
+          <p style="font-size:19px;line-height:1.35;color:var(--ink-2);margin-top:10px">
+            Правила не ошибаются, но находят треть. Гибрид находит почти всё
+            ценой <b>0.28</b> лишней карточки. Для продукта размен верный:
+            карточку подтверждает человек, а пропущенная доплата теряется молча.
+          </p>
+        </div>
+      </div>
+
+      <div class="honesty">
+        <div class="hon hon-stop">
+          <div class="hon-title">Связывание реплик и статус согласования не заявляю</div>
+          <div class="hon-text">
+            «Ок, утверждаю план на завтра» размечено как согласие на доплату,
+            хотя относится к графику. Разбор примеров показал: <b>прав пайплайн,
+            а не разметка</b>. Пометка стоит в самом отчёте.
+          </div>
+        </div>
+        <div class="hon">
+          <div class="hon-title">Пять дефектов собственной разметки</div>
+          <div class="hon-text">
+            Эхо инструкций в тексте, согласование внутри реплики-наполнителя,
+            «тихие» диалоги размечены по типу вместо содержания.
+            <b>Три из пяти видны только при чтении примеров</b>, ни одна
+            автопроверка их не находит.
+          </div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Корпус синтетический, язык модельный. Живые подрядчики пишут грязнее — с опечатками, голосовыми и обрывками</span>
+        <span><b>Первый прогон дал F1 0.538 — и это была ошибка разметки, а не системы</b></span>
       </div>
     </div>
   </div>
