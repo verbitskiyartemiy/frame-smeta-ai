@@ -1,0 +1,85 @@
+{
+ "measured_types": [
+  "acceptance_request",
+  "budget_change"
+ ],
+ "scoring_note": "Задачи, вопросы и риски корпус не размечает, поэтому предсказания этих типов исключены из подсчёта.",
+ "not_valid_on_this_corpus": {
+  "metrics": [
+   "multi_message_linkage",
+   "workflow_state"
+  ],
+  "why": "Фраза согласия стоит на позиции из спецификации, но между ней и суммой генератор успевает вставить другие темы. «Ок, утверждаю план на завтра» размечено как согласие на доплату, хотя относится к графику. Ручная проверка примеров показала, что пайплайн в этих случаях прав, а разметка нет. Числа по этим двум метрикам не заявляем."
+ },
+ "corpus": {
+  "dialogs": 50,
+  "messages": 326,
+  "events": 32,
+  "annotation": "from specification",
+  "warning": "Язык модельный, живые подрядчики пишут грязнее. Генератор и извлечение — одно семейство моделей, общие слепые зоны возможны."
+ },
+ "hybrid": {
+  "event_detection": {
+   "precision": 0.737,
+   "recall": 0.875,
+   "f1": 0.8,
+   "tp": 28,
+   "fp": 10,
+   "fn": 4
+  },
+  "multi_message_linkage": {
+   "support": 26,
+   "exact": 2,
+   "accuracy": 0.077
+  },
+  "workflow_state": {
+   "support": 28,
+   "correct": 2,
+   "accuracy": 0.071
+  },
+  "amount": {
+   "support": 19,
+   "correct": 17,
+   "accuracy": 0.895
+  },
+  "source_grounding_rate": 1.0,
+  "quiet": {
+   "dialogs": 18,
+   "false_cards": 5,
+   "cards_per_dialog": 0.28
+  }
+ },
+ "rules": {
+  "event_detection": {
+   "precision": 1.0,
+   "recall": 0.375,
+   "f1": 0.545,
+   "tp": 12,
+   "fp": 0,
+   "fn": 20
+  },
+  "multi_message_linkage": {
+   "support": 26,
+   "exact": 0,
+   "accuracy": 0.0
+  },
+  "workflow_state": {
+   "support": 12,
+   "correct": 5,
+   "accuracy": 0.417
+  },
+  "amount": {
+   "support": 19,
+   "correct": 2,
+   "accuracy": 0.105
+  },
+  "source_grounding_rate": 1.0,
+  "quiet": {
+   "dialogs": 18,
+   "false_cards": 0,
+   "cards_per_dialog": 0.0
+  }
+ },
+ "elapsed_sec": 0.0,
+ "failures": []
+}

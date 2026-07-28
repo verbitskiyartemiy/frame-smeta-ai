@@ -125,13 +125,17 @@ def evaluate(events: list[dict], gold_events: list[dict],
     amount_support = sum(
         event.get("amount_rub") is not None for event in gold_events
     )
+    # В корпусе из многих диалогов встречаются переписки вообще без денег.
+    # Делить там не на что, и это отсутствие замера, а не нулевое качество.
     amounts = {
         "support": amount_support,
         "matched_events": len(amount_keys),
         "correct": amount_correct,
-        "accuracy": round(amount_correct / amount_support, 3),
+        "accuracy": round(amount_correct / amount_support, 3)
+        if amount_support else None,
         "kind_correct": amount_kind_correct,
-        "kind_accuracy": round(amount_kind_correct / amount_support, 3),
+        "kind_accuracy": round(amount_kind_correct / amount_support, 3)
+        if amount_support else None,
     }
 
     valid_message_ids = {message["id"] for message in messages}
