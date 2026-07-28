@@ -1,0 +1,189 @@
+<title>Преимущество модели исчезает на новой компании</title>
+
+<style>
+  :root {
+    --ink: #0B1220;
+    --ink-2: #475569;
+    --ink-3: #8A97A8;
+    --line: #DDE4EC;
+    --surface: #FCFCFB;
+    --simple: #B45309;
+    --ml: #1F6FEB;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #EDF1F6;
+      --ink-2: #A8B4C4;
+      --ink-3: #78889C;
+      --line: #2C3542;
+      --surface: #14181F;
+      --simple: #C67C28;
+      --ml: #4E90F0;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #EDF1F6; --ink-2: #A8B4C4; --ink-3: #78889C;
+    --line: #2C3542; --surface: #14181F;
+    --simple: #C67C28; --ml: #4E90F0;
+  }
+
+  :root[data-theme="light"] {
+    --ink: #0B1220; --ink-2: #475569; --ink-3: #8A97A8;
+    --line: #DDE4EC; --surface: #FCFCFB;
+    --simple: #B45309; --ml: #1F6FEB;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: "Segoe UI", Inter, system-ui, -apple-system, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 40px;
+  }
+
+  .wrap { width: 100%; max-width: 1200px; }
+
+  svg { width: 100%; height: auto; display: block; }
+
+  .note {
+    margin-top: 6px;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 62ch;
+  }
+
+  .note b { color: var(--ink); }
+
+  table {
+    margin-top: 26px;
+    border-collapse: collapse;
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-bottom: 8px;
+  }
+
+  th, td { padding: 6px 18px 6px 0; text-align: left; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--ink-3); font-size: 13px; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+</style>
+
+<div class="wrap">
+  <svg viewBox="0 0 1200 620" role="img"
+       aria-label="Слоуп-график: на смешанном разбиении ML даёт 38,7% MAPE против 43,6% у простого решения, на новой компании 44,0% против 43,5% — преимущество исчезает.">
+
+    <text x="0" y="38" fill="var(--ink)" font-size="34" font-weight="700">
+      Преимущество модели исчезает на новой компании
+    </text>
+    <text x="0" y="72" fill="var(--ink-2)" font-size="19">
+      Средняя ошибка предсказания цены, MAPE
+    </text>
+
+    <!-- сетка -->
+    <g stroke="var(--line)" stroke-width="1">
+      <line x1="260" y1="188" x2="1000" y2="188" />
+      <line x1="260" y1="256" x2="1000" y2="256" />
+      <line x1="260" y1="324" x2="1000" y2="324" />
+      <line x1="260" y1="392" x2="1000" y2="392" />
+    </g>
+    <g fill="var(--ink-3)" font-size="16" text-anchor="end">
+      <text x="205" y="194">44%</text>
+      <text x="205" y="262">42%</text>
+      <text x="205" y="330">40%</text>
+      <text x="205" y="398">38%</text>
+    </g>
+
+    <!-- направление "лучше" -->
+    <g stroke="var(--ink-3)" stroke-width="1.5" fill="none">
+      <line x1="112" y1="230" x2="112" y2="400" />
+      <path d="M106 392 L112 402 L118 392" />
+    </g>
+    <text x="100" y="222" fill="var(--ink-3)" font-size="15" text-anchor="end"
+          transform="rotate(-90 100 222)">ниже — лучше</text>
+
+    <!-- подписи оси X -->
+    <line x1="260" y1="470" x2="1000" y2="470" stroke="var(--line)" stroke-width="2" />
+    <text x="340" y="500" fill="var(--ink)" font-size="19" font-weight="600" text-anchor="middle">
+      Смешанное разбиение
+    </text>
+    <text x="340" y="524" fill="var(--ink-3)" font-size="16" text-anchor="middle">
+      компании перемешаны
+    </text>
+    <text x="860" y="500" fill="var(--ink)" font-size="19" font-weight="600" text-anchor="middle">
+      Новая компания
+    </text>
+    <text x="860" y="524" fill="var(--ink-3)" font-size="16" text-anchor="middle">
+      её нет в обучении
+    </text>
+
+    <!-- разрыв слева -->
+    <g stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 4">
+      <line x1="340" y1="201.6" x2="340" y2="368.2" />
+    </g>
+    <text x="326" y="292" fill="var(--ink-2)" font-size="16" text-anchor="end">
+      4,9 п.п.
+    </text>
+
+    <!-- линии -->
+    <path d="M340 368.2 L860 188" fill="none" stroke="var(--ml)" stroke-width="3" />
+    <path d="M340 201.6 L860 205" fill="none" stroke="var(--simple)" stroke-width="3" />
+
+    <!-- точки: кольцо цвета поверхности, чтобы не слипались -->
+    <g stroke="var(--surface)" stroke-width="2">
+      <circle cx="340" cy="368.2" r="9" fill="var(--ml)" />
+      <circle cx="860" cy="188" r="9" fill="var(--ml)" />
+      <circle cx="340" cy="201.6" r="9" fill="var(--simple)" />
+      <circle cx="860" cy="205" r="9" fill="var(--simple)" />
+    </g>
+
+    <!-- значения слева -->
+    <text x="318" y="375" fill="var(--ink)" font-size="26" font-weight="700" text-anchor="end">38,7%</text>
+    <text x="318" y="196" fill="var(--ink)" font-size="26" font-weight="700" text-anchor="end">43,6%</text>
+
+    <!-- значения справа: разведены, потому что 44,0 и 43,5 почти совпали -->
+    <circle cx="890" cy="172" r="6" fill="var(--ml)" />
+    <text x="906" y="179" fill="var(--ink)" font-size="26" font-weight="700">44,0%</text>
+    <text x="906" y="203" fill="var(--ink-3)" font-size="16">модель</text>
+
+    <circle cx="890" cy="232" r="6" fill="var(--simple)" />
+    <text x="906" y="239" fill="var(--ink)" font-size="26" font-weight="700">43,5%</text>
+    <text x="906" y="263" fill="var(--ink-3)" font-size="16">простое решение</text>
+
+    <!-- легенда -->
+    <g transform="translate(0 570)">
+      <circle cx="8" cy="-6" r="7" fill="var(--simple)" />
+      <text x="26" y="0" fill="var(--ink-2)" font-size="17">Медиана по виду работы</text>
+      <circle cx="290" cy="-6" r="7" fill="var(--ml)" />
+      <text x="308" y="0" fill="var(--ink-2)" font-size="17">Линейная регрессия</text>
+    </g>
+  </svg>
+
+  <p class="note">
+    На смешанном разбиении модель опережает простое решение на 4,9 п.п. На компании,
+    которой не было в обучении, преимущество не просто уменьшается — <b>его нет</b>.
+    Модель выигрывает лишь на 12 компаниях из 22.
+  </p>
+
+  <table>
+    <caption>Те же данные числами</caption>
+    <thead>
+      <tr><th>Проверка</th><th>Медиана по виду работы</th><th>Линейная регрессия</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Смешанное разбиение (5-fold CV)</td><td class="num">43,6%</td><td class="num">38,7%</td></tr>
+      <tr><td>Новая компания (leave-one-company-out)</td><td class="num">43,5%</td><td class="num">44,0%</td></tr>
+    </tbody>
+  </table>
+</div>
