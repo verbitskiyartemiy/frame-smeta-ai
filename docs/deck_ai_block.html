@@ -71,7 +71,6 @@
     width: 1920px;
     height: 1080px;
     transform-origin: top left;
-    scale: calc(100cqw / 1920);
     padding: 60px 76px 52px;
     display: flex;
     flex-direction: column;
@@ -507,6 +506,18 @@
     body { background: #14181F; }
     .note { background: #1B212A; }
   }
+
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .deck { gap: 0; padding: 0; }
+    .note { display: none; }
+    .frame {
+      max-width: none; width: 1920px; height: 1080px;
+      aspect-ratio: auto; box-shadow: none; break-after: page;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 
 <div class="deck">
@@ -514,7 +525,7 @@
   <div class="note">
     Шесть слайдов на замену AI-блоку (сейчас это 9–14). Формат <b>1920×1080</b>, стилистика
     твоя: синий, сетка чертежа, крупные заголовки. Плашка «ITMO» — заглушка под твой логотип.
-    Все числа сверены с <b>reports/*.json</b>. Сохранять: печать в PDF или скриншот каждого кадра.
+    Все числа сверены с <b>reports/*.json</b>. Сохранять: <b>Ctrl+P → PDF</b>, поля «нет», фон включён — каждый слайд станет страницей 1920×1080 с векторным текстом.
   </div>
 
   <!-- ============ 1 ============ -->
@@ -1052,3 +1063,23 @@
   </div>
 
 </div>
+
+<script>
+  // scale: calc(100cqw / 1920) невалиден — деление длины на число даёт длину,
+  // а scale требует безразмерный множитель. Поэтому считаем коэффициент здесь.
+  function fitSlides() {
+    document.querySelectorAll('.frame').forEach(function (frame) {
+      var slide = frame.querySelector('.slide')
+      if (!slide) return
+      slide.style.transform = 'scale(' + frame.clientWidth / 1920 + ')'
+    })
+  }
+  fitSlides()
+  addEventListener('resize', fitSlides)
+  addEventListener('beforeprint', function () {
+    document.querySelectorAll('.slide').forEach(function (s) {
+      s.style.transform = 'none'
+    })
+  })
+  addEventListener('afterprint', fitSlides)
+</script>

@@ -96,10 +96,11 @@
   /* ---------- чат ---------- */
   .chat { display: flex; flex-direction: column; gap: 10px; }
 
-  .msg { display: grid; grid-template-columns: 46px 1fr; gap: 14px; align-items: start; }
-  .msg.me { grid-template-columns: 1fr 46px; }
-  .msg.me .who { order: 2; }
-  .msg.me .bubble { order: 1; }
+  .msg { display: grid; grid-template-columns: 26px 44px 1fr; gap: 12px; align-items: start; }
+  .msg.me { grid-template-columns: 26px 1fr 44px; }
+  .msg.me .who { order: 3; }
+  .msg.me .bubble { order: 2; }
+  .msg.me .tag { order: 1; }
 
   .who {
     width: 44px; height: 44px; border-radius: 50%;
@@ -115,19 +116,30 @@
   .msg.me .bubble { background: var(--blue); color: #fff; }
 
   .bubble .num { font-weight: 800; }
-  .msg.tagged .bubble { box-shadow: 0 0 0 3px var(--blue); }
 
+  /* Номер реплики — сбоку от пузыря, а не внутри: внутри он спорит с текстом */
   .tag {
-    display: inline-block; margin-left: 8px; vertical-align: middle;
     font-family: var(--mono); font-size: 15px; font-weight: 700;
-    color: var(--blue); background: #fff;
-    border: 2px solid var(--blue); border-radius: 6px; padding: 1px 7px;
+    color: var(--ink-3); align-self: center; text-align: center;
   }
-  .msg.me .tag { background: #fff; }
+
+  /* Одна скоба на все четыре реплики вместо обводки на каждой */
+  .chat-wrap { position: relative; padding-right: 34px; }
+  .brace {
+    position: absolute; right: 0; top: 6px; bottom: 6px; width: 20px;
+    border: 3px solid var(--blue); border-left: none;
+    border-radius: 0 14px 14px 0;
+  }
+  .brace-label {
+    position: absolute; right: -6px; top: 50%;
+    transform: translate(100%, -50%) rotate(-90deg); transform-origin: left center;
+    font-size: 15px; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--blue); white-space: nowrap;
+  }
 
   /* ---------- карточка ---------- */
   .card {
-    border: 3px solid var(--ink); border-radius: 20px; padding: 22px 28px;
+    border: 2px solid var(--ink); border-radius: 20px; padding: 22px 28px;
     background: #fff; display: flex; flex-direction: column; gap: 10px;
   }
 
@@ -168,7 +180,7 @@
 
   /* ---------- нижняя полоса ---------- */
   .punch {
-    margin-top: auto; padding-top: 14px; border-top: 3px solid var(--ink);
+    margin-top: auto; padding-top: 14px; border-top: 2px solid var(--ink);
     display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
   }
 
@@ -212,7 +224,7 @@
   }
 
   .answer-box {
-    border: 3px solid var(--line); border-radius: 18px; padding: 18px 26px;
+    border: 2px solid var(--line); border-radius: 18px; padding: 18px 26px;
     display: flex; flex-direction: column; gap: 11px;
   }
 
@@ -228,7 +240,7 @@
 
   .action-row {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 30px; border: 3px solid var(--ink); border-radius: 18px;
+    gap: 30px; border: 2px solid var(--ink); border-radius: 18px;
     padding: 16px 26px; background: #fff;
   }
 
@@ -254,7 +266,7 @@
   }
 
   .measured {
-    border-top: 3px solid var(--ink); padding-top: 14px; margin-top: 2px;
+    border-top: 2px solid var(--ink); padding-top: 14px; margin-top: 2px;
   }
 
   .meas-title {
@@ -273,6 +285,18 @@
   .meas.warn .meas-n { color: var(--amber); }
   .meas.warn .meas-l b { color: var(--amber); }
 
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .deck { gap: 0; padding: 0; }
+    .note { display: none; }
+    .frame {
+      max-width: none; width: 1920px; height: 1080px;
+      aspect-ratio: auto; box-shadow: none; break-after: page;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
   .footnote {
     margin-top: auto; padding-top: 15px; border-top: 2px solid var(--line);
     font-size: 17px; color: var(--ink-3);
@@ -286,7 +310,7 @@
   <div class="note">
     Два слайда про <b>работающее решение</b> — без лестниц baseline и отрицательных
     результатов. Формат 1920×1080, стилистика твоего дека. Первый — координатор
-    переписки, второй — помощник по проекту.
+    переписки, второй — помощник по проекту.<br><br>Для полного качества: <b>Ctrl+P → Сохранить как PDF</b>, поля «нет», фон включён — каждый слайд выйдет отдельной страницей 1920×1080 с векторным текстом. Скриншот с экрана даст только ширину окна.
   </div>
 
   <!-- ============ 1 ============ -->
@@ -304,32 +328,36 @@
       <div class="stage">
         <div>
           <div class="panel-head">Как выглядит в чате</div>
-          <div class="chat">
-            <div class="msg tagged">
-              <div class="who">ИВ</div>
-              <div class="bubble">
-                Вскрыли стены на кухне: проводка старая, алюминий.
-                Полная замена будет <span class="num">+12 000 ₽</span>
-                <span class="tag">#1</span>
+          <div class="chat-wrap">
+            <div class="chat">
+              <div class="msg">
+                <span class="tag">1</span>
+                <div class="who">ИВ</div>
+                <div class="bubble">
+                  Вскрыли стены на кухне: проводка старая, алюминий.
+                  Полная замена будет <span class="num">+12 000 ₽</span>
+                </div>
+              </div>
+              <div class="msg me">
+                <span class="tag">2</span>
+                <div class="who">Вы</div>
+                <div class="bubble">Это если менять полностью, без частичного ремонта?</div>
+              </div>
+              <div class="msg">
+                <span class="tag">3</span>
+                <div class="who">ИВ</div>
+                <div class="bubble">
+                  Частично не советую: старые скрутки греются, это риск перегрева
+                </div>
+              </div>
+              <div class="msg me">
+                <span class="tag">4</span>
+                <div class="who">Вы</div>
+                <div class="bubble">Понял, тогда меняем полностью</div>
               </div>
             </div>
-            <div class="msg me tagged">
-              <div class="who">Вы</div>
-              <div class="bubble">Это если менять полностью, без частичного ремонта?
-                <span class="tag">#2</span></div>
-            </div>
-            <div class="msg tagged">
-              <div class="who">ИВ</div>
-              <div class="bubble">
-                Частично не советую: старые скрутки греются, это риск перегрева
-                <span class="tag">#3</span>
-              </div>
-            </div>
-            <div class="msg me tagged">
-              <div class="who">Вы</div>
-              <div class="bubble">Понял, тогда меняем полностью
-                <span class="tag">#4</span></div>
-            </div>
+            <div class="brace"></div>
+            <div class="brace-label">одно событие</div>
           </div>
         </div>
 
@@ -478,3 +506,23 @@
   </div>
 
 </div>
+
+<script>
+  // scale: calc(100cqw / 1920) невалиден — деление длины на число даёт длину,
+  // а scale требует безразмерный множитель. Поэтому считаем коэффициент здесь.
+  function fitSlides() {
+    document.querySelectorAll('.frame').forEach(function (frame) {
+      var slide = frame.querySelector('.slide')
+      if (!slide) return
+      slide.style.transform = 'scale(' + frame.clientWidth / 1920 + ')'
+    })
+  }
+  fitSlides()
+  addEventListener('resize', fitSlides)
+  addEventListener('beforeprint', function () {
+    document.querySelectorAll('.slide').forEach(function (s) {
+      s.style.transform = 'none'
+    })
+  })
+  addEventListener('afterprint', fitSlides)
+</script>

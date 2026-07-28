@@ -173,6 +173,18 @@
     font-family: var(--mono); font-size: 16px; color: var(--ink-3);
     white-space: nowrap;
   }
+
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .deck { gap: 0; padding: 0; }
+    .note { display: none; }
+    .frame {
+      max-width: none; width: 1920px; height: 1080px;
+      aspect-ratio: auto; box-shadow: none; break-after: page;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 
 <div class="deck">
@@ -180,7 +192,7 @@
   <div class="note">
     Слайд под критерий <b>«применение ИИ»</b>: не про функции внутри продукта,
     а про то, как ИИ применялся при создании проекта. Формат 1920×1080.
-    Инструменты в правом нижнем углу поправь под то, чем пользовался на самом деле.
+    Инструменты в правом нижнем углу поправь под то, чем пользовался на самом деле.<br><br>Для полного качества: <b>Ctrl+P → Сохранить как PDF</b>, поля «нет», фон включён — каждый слайд выйдет отдельной страницей 1920×1080 с векторным текстом. Скриншот с экрана даст только ширину окна.
   </div>
 
   <div class="frame">
@@ -377,3 +389,23 @@
   </div>
 
 </div>
+
+<script>
+  // scale: calc(100cqw / 1920) невалиден — деление длины на число даёт длину,
+  // а scale требует безразмерный множитель. Поэтому считаем коэффициент здесь.
+  function fitSlides() {
+    document.querySelectorAll('.frame').forEach(function (frame) {
+      var slide = frame.querySelector('.slide')
+      if (!slide) return
+      slide.style.transform = 'scale(' + frame.clientWidth / 1920 + ')'
+    })
+  }
+  fitSlides()
+  addEventListener('resize', fitSlides)
+  addEventListener('beforeprint', function () {
+    document.querySelectorAll('.slide').forEach(function (s) {
+      s.style.transform = 'none'
+    })
+  })
+  addEventListener('afterprint', fitSlides)
+</script>
