@@ -157,3 +157,31 @@ def test_embeddings_failure_does_not_claim_gigachat_retrieval(client):
     assert body["retrieval_backend"] == "rules"
     assert body["extraction_backend"] == "rules"
     assert body["mode"] == "RULES_ONLY"
+
+
+def test_simulated_reply_is_marked_as_simulation(client):
+    with mock.patch.object(hybrid_coordinator, "call_llm",
+                           lambda *a, **k: "  Проводка старая,\n доплата 12 000 руб  "):
+        body = client.post("/api/simulate/reply",
+                           json={"messages": CHAIN}).get_json()
+
+    assert body["simulated"] is True, "реплику стенда нельзя выдавать за человека"
+    assert body["text"] == "Проводка старая, доплата 12 000 руб"
+
+
+def test_simulated_reply_reports_failure_instead_of_inventing(client):
+    def broken_llm(*_args, **_kwargs):
+        raise RuntimeError("LLM недоступна")
+
+    with mock.patch.object(hybrid_coordinator, "call_llm", broken_llm):
+        response = client.post("/api/simulate/reply", json={"messages": CHAIN})
+
+    assert response.status_code == 502
+    assert "text" not in response.get_json(), "без LLM реплику придумывать нельзя"
+
+
+def test_simulate_rejects_empty_payload(client):
+    assert client.post("/api/simulate/reply", json={}).status_code == 400
+    assert client.post("/api/simulate/reply",
+                       json={"messages": [{"author": "Вы", "text": "   "}]}
+                       ).status_code == 400
