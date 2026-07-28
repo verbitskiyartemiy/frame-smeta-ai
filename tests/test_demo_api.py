@@ -339,3 +339,26 @@ def test_knowledge_lexical_fallback_finds_stage():
     found.sort(key=lambda pair: pair[0], reverse=True)
     assert found, "запасной поиск обязан что-то находить"
     assert found[0][1]["stage"] == "Электромонтаж"
+
+
+def test_estimate_reports_arithmetic_and_duplicates(client):
+    """Проверки без модели: несходящееся умножение — это ошибка, а не мнение."""
+    body = client.post("/api/estimate/analyze", json={
+        "text": "Штукатурка стен; 40; 850; 40000\n"
+                "Грунтовка стен; 10; 120; 1200\n"
+                "Грунтовка стен; 10; 120; 1200",
+        "declared_total": 99999,
+    }).get_json()
+
+    kinds = {c["kind"] for c in body["checks"]}
+    assert "line_mismatch" in kinds, "40 x 850 = 34000, а не 40000"
+    assert "duplicate" in kinds
+    assert "total_mismatch" in kinds
+    assert body["computed_total"] > 0
+
+
+def test_estimate_clean_smeta_has_no_checks(client):
+    body = client.post("/api/estimate/analyze", json={
+        "text": "Штукатурка стен; 40; 850; 34000",
+    }).get_json()
+    assert body["checks"] == []

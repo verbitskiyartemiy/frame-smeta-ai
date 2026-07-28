@@ -23,7 +23,8 @@ sys.path.append(os.path.dirname(__file__))
 
 import hybrid_coordinator
 import knowledge
-from copilot_tools import MIN_SAMPLE, get_market_corridor, parse_estimate
+from copilot_tools import (MIN_SAMPLE, check_arithmetic, get_market_corridor,
+                           parse_estimate)
 from hybrid_coordinator import analyze_hybrid
 from llm_coordinator import load_dialog, load_env
 
@@ -133,14 +134,32 @@ def estimate_analyze():
         return ("", 204)
     payload = request.get_json(silent=True) or {}
     text = payload.get("text")
+    # Заявленные в смете суммы строк идут отдельно: parse_estimate считает
+    # amount сам, и без этого проверка арифметики сравнивала бы число с собой.
+    declared: dict[int, float] = {}
     if not text and payload.get("lines"):
-        text = "\n".join(
-            f"{l.get('name', '')}; {l.get('qty', 1)}; {l.get('price', '')}"
-            for l in payload["lines"])
+        rows = []
+        for i, line in enumerate(payload["lines"], start=1):
+            rows.append(f"{line.get('name', '')}; {line.get('qty', 1)}; "
+                        f"{line.get('price', '')}")
+            if isinstance(line.get("amount"), (int, float)):
+                declared[i] = float(line["amount"])
+        text = "\n".join(rows)
     if not text:
         return jsonify({"error": "нужен text или lines"}), 400
 
     parsed = parse_estimate(str(text))
+    if not declared:
+        for i, raw_line in enumerate(str(text).splitlines(), start=1):
+            parts = [p.strip() for p in raw_line.split(";")]
+            if len(parts) >= 4:
+                try:
+                    declared[i] = float(parts[3].replace(" ", "").replace(",", "."))
+                except ValueError:
+                    pass
+    for line in parsed["lines"]:
+        if line["line"] in declared:
+            line["amount"] = declared[line["line"]]
     items = []
     matched = 0
     for line in parsed["lines"]:
@@ -177,12 +196,43 @@ def estimate_analyze():
                 })
         items.append(row)
 
+    # Детерминированные проверки: здесь нет ни модели, ни вероятностей.
+    # Если умножение не сходится — это ошибка, а не «повод спросить».
+    declared_total = payload.get("declared_total")
+    arithmetic = check_arithmetic(parsed["lines"], declared_total)
+    checks = []
+    for issue in arithmetic["issues"]:
+        if issue["kind"] == "line_mismatch":
+            checks.append({
+                "kind": "line_mismatch", "line": issue["line"],
+                "title": "Сумма строки не сходится",
+                "detail": f"в смете {issue['declared']:.0f} ₽, "
+                          f"а цена на количество даёт {issue['expected']:.0f} ₽",
+            })
+        elif issue["kind"] == "possible_duplicate":
+            checks.append({
+                "kind": "duplicate", "line": issue["line"],
+                "title": "Позиция повторяется",
+                "detail": f"«{issue['work']}» с той же ценой уже есть "
+                          f"в строке {issue['same_as_line']}",
+            })
+        elif issue["kind"] == "total_mismatch":
+            checks.append({
+                "kind": "total_mismatch", "line": None,
+                "title": "Итог не сходится с суммой строк",
+                "detail": f"заявлено {issue['declared']:.0f} ₽, "
+                          f"строки дают {issue['expected']:.0f} ₽",
+            })
+
     return jsonify({
         "items": items,
         "coverage": {"matched": matched, "total": len(items)},
+        "checks": checks,
+        "computed_total": arithmetic["computed_total"],
         "source": MARKET_SOURCE,
         "min_sample": MIN_SAMPLE,
-        "method": "нормализация позиции -> медианный ориентир и коридор P10-P90",
+        "method": "нормализация позиции -> медианный ориентир и коридор P10-P90; "
+                  "арифметика и дубли проверяются кодом",
     })
 
 
