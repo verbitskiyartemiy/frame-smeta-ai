@@ -1,0 +1,194 @@
+"""HTTP API конкурсного демо FRAME.
+
+Тонкий слой поверх существующего ML-пайплайна:
+- POST /api/coordinator/analyze -> hybrid_coordinator.analyze_hybrid
+- POST /api/estimate/analyze    -> copilot_tools (нормализация + медианный ориентир)
+- GET  /api/health              -> готовность и конфигурация без секретов
+
+Слой не переписывает пайплайн и не принимает решений: события остаются
+предложениями до подтверждения человеком на фронтенде.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import time
+
+from flask import Flask, jsonify, request
+
+sys.path.append(os.path.dirname(__file__))
+
+import hybrid_coordinator
+from copilot_tools import MIN_SAMPLE, get_market_corridor, parse_estimate
+from hybrid_coordinator import analyze_hybrid
+from llm_coordinator import load_dialog, load_env
+
+ALLOWED_ORIGINS = {
+    "http://127.0.0.1:5174", "http://localhost:5174",
+    "http://127.0.0.1:5173", "http://localhost:5173",
+}
+MARKET_SOURCE = "2 369 публичных цен · 22 компании · 7 городов · 47 типов работ"
+
+app = Flask(__name__)
+
+
+@app.after_request
+def add_cors(response):
+    origin = request.headers.get("Origin", "")
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    load_env()
+    has_key = bool(os.environ.get("LLM_AUTH_KEY") or os.environ.get("LLM_API_KEY"))
+    return jsonify({
+        "status": "ok",
+        "service": "frame-demo-api",
+        "llm_configured": has_key,
+        "provider": os.environ.get("LLM_PROVIDER", "не задан"),
+        "embeddings_endpoint_configured": bool(
+            os.environ.get("GIGACHAT_EMBEDDINGS_API_BASE")),
+        "note": "llm_configured=false означает честный режим RULES_ONLY",
+    })
+
+
+def _backends(result: dict) -> dict:
+    stats = result.get("stats", {})
+    embed_errors = [e for e in result.get("errors", [])
+                    if str(e.get("stage", "")).startswith("embeddings")]
+    if stats.get("embeddings_enabled") and not embed_errors:
+        retrieval = "gigachat_embeddings"
+    else:
+        retrieval = "rules"
+    extraction = "gigachat" if stats.get("live_chunks", 0) > 0 else "rules"
+    return {"retrieval_backend": retrieval, "extraction_backend": extraction}
+
+
+@app.route("/api/coordinator/analyze", methods=["POST", "OPTIONS"])
+def coordinator_analyze():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    started = time.time()
+    payload = request.get_json(silent=True)
+    if payload is None:
+        if request.data:
+            return jsonify({"error": "тело запроса не является корректным JSON "
+                                     "(проверьте кодировку UTF-8)"}), 400
+        payload = {}
+
+    messages = payload.get("messages")
+    if not messages:
+        messages = load_dialog()
+    else:
+        clean = []
+        for i, m in enumerate(messages, start=1):
+            if not isinstance(m, dict) or not str(m.get("text", "")).strip():
+                return jsonify({"error": f"сообщение #{i} без текста"}), 400
+            clean.append({
+                "id": int(m.get("id", i)),
+                "author": str(m.get("author", "Участник")),
+                "ts": str(m.get("ts", "")),
+                "text": str(m["text"]),
+            })
+        messages = clean
+
+    use_embeddings = bool(payload.get("use_embeddings", True))
+    project = str(payload.get("project", "Квартира на Невском, ремонт под ключ"))
+
+    try:
+        # Вызываемое разрешается на момент запроса, а не на импорте:
+        # иначе подмена в тестах не действует и они уходят в сеть.
+        result = analyze_hybrid(
+            messages, project=project, use_embeddings=use_embeddings,
+            llm_call=hybrid_coordinator.call_llm,
+        )
+    except Exception as exc:  # полный отказ пайплайна
+        return jsonify({
+            "mode": "RULES_ONLY",
+            "events": [],
+            "errors": [{"stage": "pipeline",
+                        "reason": f"{type(exc).__name__}: {exc}"}],
+            "retrieval_backend": "rules",
+            "extraction_backend": "rules",
+            "elapsed_sec": round(time.time() - started, 1),
+        }), 502
+
+    result.update(_backends(result))
+    return jsonify(result)
+
+
+@app.route("/api/estimate/analyze", methods=["POST", "OPTIONS"])
+def estimate_analyze():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    payload = request.get_json(silent=True) or {}
+    text = payload.get("text")
+    if not text and payload.get("lines"):
+        text = "\n".join(
+            f"{l.get('name', '')}; {l.get('qty', 1)}; {l.get('price', '')}"
+            for l in payload["lines"])
+    if not text:
+        return jsonify({"error": "нужен text или lines"}), 400
+
+    parsed = parse_estimate(str(text))
+    items = []
+    matched = 0
+    for line in parsed["lines"]:
+        row = {
+            "raw_name": line["raw_name"],
+            "normalized_work": line["canonical_work"],
+            "quantity": line["quantity"],
+            "unit_price": line["unit_price"],
+        }
+        if not line["recognized"]:
+            row.update({
+                "assessment": "none",
+                "reason": "позиция не сопоставлена со справочником работ — "
+                          "ориентир не выдаётся",
+            })
+        else:
+            corr = get_market_corridor(line["canonical_work"])
+            if corr["status"] != "ok":
+                row.update({
+                    "assessment": "none",
+                    "reason": corr["reason"],
+                })
+            else:
+                matched += 1
+                deviation = (line["unit_price"] / corr["median"] - 1) * 100
+                row.update({
+                    "assessment": "benchmarked",
+                    "median_benchmark": corr["median"],
+                    "corridor": {"p10": corr["p10"], "p90": corr["p90"]},
+                    "deviation_pct": round(deviation, 1),
+                    "sample_size": corr["sample_size"],
+                    "reason": "это ориентир для вопроса подрядчику, "
+                              "а не оценка добросовестности",
+                })
+        items.append(row)
+
+    return jsonify({
+        "items": items,
+        "coverage": {"matched": matched, "total": len(items)},
+        "source": MARKET_SOURCE,
+        "min_sample": MIN_SAMPLE,
+        "method": "нормализация позиции -> медианный ориентир и коридор P10-P90",
+    })
+
+
+def main() -> None:
+    load_env()
+    port = int(os.environ.get("DEMO_API_PORT", "8000"))
+    print(f"FRAME demo API: http://127.0.0.1:{port}/api/health")
+    app.run(host="127.0.0.1", port=port, threaded=True)
+
+
+if __name__ == "__main__":
+    main()
