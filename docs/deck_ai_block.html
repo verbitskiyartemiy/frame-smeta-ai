@@ -1,0 +1,789 @@
+<title>FRAME · AI-слой · блок слайдов</title>
+
+<style>
+  :root {
+    --blue: #1F6FEB;
+    --blue-deep: #0B3D91;
+    --blue-wash: #EAF1FE;
+    --ink: #0B1220;
+    --ink-2: #475569;
+    --ink-3: #94A3B8;
+    --paper: #FFFFFF;
+    --wash: #F1F5F9;
+    --line: #DBE3EC;
+    --green: #0F8A5F;
+    --green-wash: #E3F5ED;
+    --amber: #B45309;
+    --amber-wash: #FDF0DC;
+    --red: #B91C1C;
+    --red-wash: #FCE8E8;
+
+    --sans: "Segoe UI", "Inter", system-ui, -apple-system, Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", monospace;
+  }
+
+  body {
+    background: #303743;
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: 28px 16px 60px;
+  }
+
+  .note {
+    max-width: 1000px;
+    color: #C9D2DE;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #262C36;
+    border-left: 3px solid var(--blue);
+    padding: 14px 18px;
+  }
+
+  .note b { color: #fff; }
+
+  /* --- слайд: фиксированные 1920x1080, ужимается под окно --- */
+  .frame {
+    width: 100%;
+    max-width: 1920px;
+    aspect-ratio: 16 / 9;
+    container-type: size;
+    background: var(--paper);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .35);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: top left;
+    scale: calc(100cqw / 1920);
+    padding: 76px 84px 68px;
+    display: flex;
+    flex-direction: column;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px;
+    background-position: -1px -1px;
+  }
+
+  .slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(155deg, rgba(255,255,255,.86) 0%, rgba(255,255,255,.97) 55%);
+    pointer-events: none;
+  }
+
+  .slide > * { position: relative; }
+
+  .badge {
+    position: absolute;
+    top: 54px;
+    right: 76px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 26px;
+    z-index: 2;
+  }
+
+  h1 {
+    font-size: 74px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: .98;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 10px;
+  }
+
+  h1 .thin { color: var(--ink); }
+
+  .kicker {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 16px;
+  }
+
+  .lede {
+    font-size: 27px;
+    line-height: 1.4;
+    color: var(--ink-2);
+    max-width: 1360px;
+    margin-bottom: 34px;
+  }
+
+  .lede b { color: var(--ink); font-weight: 700; }
+
+  .footnote {
+    margin-top: auto;
+    padding-top: 22px;
+    border-top: 2px solid var(--line);
+    font-size: 18px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+  }
+
+  .footnote b { color: var(--ink-2); }
+
+  /* ---------- слайд 1: карта AI-слоя ---------- */
+  .map {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 26px;
+    flex: 1;
+  }
+
+  .zone {
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 30px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #fff;
+  }
+
+  .zone.live { border-color: var(--green); background: var(--green-wash); }
+  .zone.simple { border-color: var(--amber); background: var(--amber-wash); }
+  .zone.stopped { border-color: var(--ink-3); background: var(--wash); }
+
+  .zone-status {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .live .zone-status { color: var(--green); }
+  .simple .zone-status { color: var(--amber); }
+  .stopped .zone-status { color: var(--ink-3); }
+
+  .zone-title { font-size: 36px; font-weight: 800; line-height: 1.1; }
+
+  .zone-desc { font-size: 21px; line-height: 1.45; color: var(--ink-2); }
+
+  .zone-metric {
+    margin-top: auto;
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--ink-2);
+    border-top: 2px solid rgba(0,0,0,.08);
+    padding-top: 14px;
+  }
+
+  .zone-metric b { font-size: 27px; color: var(--ink); }
+
+  /* ---------- таблица решений ---------- */
+  table { border-collapse: collapse; width: 100%; }
+
+  th {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--ink);
+    padding: 16px 20px;
+    text-align: left;
+  }
+
+  th:last-child { background: var(--blue); }
+
+  td {
+    padding: 22px 20px;
+    font-size: 21px;
+    line-height: 1.35;
+    border-bottom: 2px solid var(--line);
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+
+  td.task { font-size: 26px; font-weight: 800; color: #fff; width: 210px; }
+  tr.r1 td.task { background: var(--green); }
+  tr.r2 td.task { background: var(--amber); }
+  tr.r3 td.task { background: #64748B; }
+
+  td.verdict { font-weight: 800; font-size: 22px; width: 290px; }
+  tr.r1 td.verdict { background: var(--green-wash); color: var(--green); }
+  tr.r2 td.verdict { background: var(--amber-wash); color: var(--amber); }
+  tr.r3 td.verdict { background: var(--wash); color: #475569; }
+
+  td b { color: var(--ink); }
+  .mono { font-family: var(--mono); }
+
+  /* ---------- пайплайн ---------- */
+  .pipe { display: flex; align-items: stretch; gap: 0; margin-bottom: 40px; }
+
+  .step {
+    flex: 1;
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 22px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .step-n {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-size: 21px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .step.human .step-n { background: var(--ink); }
+  .step-name { font-size: 25px; font-weight: 800; }
+  .step-desc { font-size: 19px; color: var(--ink-2); line-height: 1.35; }
+
+  .arrow {
+    align-self: center;
+    padding: 0 14px;
+    font-size: 30px;
+    color: var(--ink-3);
+  }
+
+  /* ---------- сравнение метрик ---------- */
+  .versus { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+
+  .vs-card {
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 28px 30px;
+    background: #fff;
+  }
+
+  .vs-card.hero { border-color: var(--blue); background: var(--blue-wash); }
+
+  .vs-label { font-size: 20px; font-weight: 700; color: var(--ink-2); margin-bottom: 16px; }
+
+  .vs-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 0;
+  }
+
+  .vs-row + .vs-row { border-top: 2px solid rgba(0,0,0,.06); }
+
+  .vs-who { font-size: 19px; color: var(--ink-3); }
+  .vs-num { font-family: var(--mono); font-size: 34px; font-weight: 700; }
+  .vs-num.weak { color: var(--ink-3); }
+  .vs-num.strong { color: var(--blue-deep); }
+  .vs-num.zero { color: var(--red); }
+
+  .vs-note { margin-top: 16px; font-size: 19px; line-height: 1.4; color: var(--ink-2); }
+
+  /* ---------- лестница baseline ---------- */
+  .ladder { display: flex; flex-direction: column; gap: 12px; }
+
+  .rung {
+    display: grid;
+    grid-template-columns: 420px 1fr 150px;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .rung-name { font-size: 23px; color: var(--ink-2); }
+  .rung-name b { color: var(--ink); }
+
+  .bar-track { height: 34px; background: var(--wash); border-radius: 6px; overflow: hidden; }
+  .bar { height: 100%; background: var(--ink-3); border-radius: 6px; }
+  .bar.win { background: var(--green); }
+  .bar.lose { background: var(--blue); }
+
+  .rung-num { font-family: var(--mono); font-size: 26px; font-weight: 700; text-align: right; }
+
+  /* ---------- петля ---------- */
+  .loop { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; flex: 1; }
+
+  .loop-list { display: flex; flex-direction: column; gap: 14px; }
+
+  .loop-item {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 18px;
+    align-items: start;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 13px;
+  }
+
+  .loop-n {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--ink); color: #fff;
+    font-size: 20px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .loop-what { font-size: 24px; font-weight: 700; }
+  .loop-label { font-size: 19px; color: var(--blue-deep); font-family: var(--mono); }
+
+  .panel {
+    border: 2px solid var(--ink);
+    border-radius: 18px;
+    padding: 32px 34px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    background: var(--ink);
+    color: #fff;
+  }
+
+  .panel h3 { font-size: 27px; font-weight: 800; }
+  .panel p { font-size: 21px; line-height: 1.45; color: #C7D2E0; }
+  .panel .big { font-size: 32px; font-weight: 800; color: #fff; line-height: 1.25; }
+  .panel .rule { height: 2px; background: rgba(255,255,255,.18); }
+
+  /* ---------- эффект ---------- */
+  .effect { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+
+  .fx {
+    border-left: 5px solid var(--blue);
+    background: var(--wash);
+    padding: 22px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fx-num { font-family: var(--mono); font-size: 40px; font-weight: 700; color: var(--blue-deep); line-height: 1; }
+  .fx-text { font-size: 21px; line-height: 1.4; color: var(--ink-2); }
+  .fx-text b { color: var(--ink); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; }
+
+  .col-head {
+    font-size: 20px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding-bottom: 12px; border-bottom: 2px solid var(--line); margin-bottom: 20px;
+  }
+
+  .did { display: flex; flex-direction: column; gap: 16px; }
+  .did-item { display: grid; grid-template-columns: 60px 1fr; gap: 16px; }
+  .did-n { font-family: var(--mono); font-size: 20px; color: var(--blue); font-weight: 700; }
+  .did-t { font-size: 24px; font-weight: 700; }
+  .did-d { font-size: 19px; color: var(--ink-2); }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #14181F; }
+    .note { background: #1B212A; }
+  }
+</style>
+
+<div class="deck">
+
+  <div class="note">
+    Шесть слайдов на замену AI-блоку (сейчас это 9–14). Формат <b>1920×1080</b>, стилистика
+    твоя: синий, сетка чертежа, крупные заголовки. Плашка «ITMO» — заглушка под твой логотип.
+    Все числа сверены с <b>reports/*.json</b>. Сохранять: печать в PDF или скриншот каждого кадра.
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">AI-слой продукта</div>
+      <h1>Три задачи —<br><span class="thin">три разных решения</span></h1>
+      <p class="lede">
+        Ремонт живёт в неструктурированном виде: переписка, сметы, отзывы.
+        Мы проверили ИИ на всех трёх и <b>выпустили только то, что выиграло измерением</b>.
+      </p>
+
+      <div class="map">
+        <div class="zone live">
+          <div class="zone-status">● выпущено</div>
+          <div class="zone-title">Координатор переписки</div>
+          <div class="zone-desc">
+            Правила ищут кандидатов, эмбеддинги связывают разнесённые реплики,
+            LLM собирает событие, валидатор проверяет источники.
+          </div>
+          <div class="zone-metric">F1 <b>0.95</b> против 0.73 у правил</div>
+        </div>
+
+        <div class="zone simple">
+          <div class="zone-status">● оставили простое</div>
+          <div class="zone-title">Проверка сметы</div>
+          <div class="zone-desc">
+            Модель цены обучена и проверена. На компании, которой она не видела,
+            выигрыша над медианой нет. В продукте — объяснимый рыночный коридор.
+          </div>
+          <div class="zone-metric">44.0% против <b>43.5%</b> у медианы</div>
+        </div>
+
+        <div class="zone stopped">
+          <div class="zone-status">● остановлено</div>
+          <div class="zone-title">Рейтинг подрядчика</div>
+          <div class="zone-desc">
+            Разбор отзывов по аспектам. Эмбеддинги подняли качество, но до порога
+            публичной оценки человека не дотянули. Ушло в R&D.
+          </div>
+          <div class="zone-metric">0.513 → <b>0.618</b> · порог не пройден</div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Каждое решение принято по заранее заданному правилу, а не по факту получившегося результата</span>
+        <span><b>121 тест · CI без обращений к сети</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Как AI-функция попадает в продукт</div>
+      <h1>Сначала baseline,<br><span class="thin">потом модель</span></h1>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Задача</th>
+            <th>Данные</th>
+            <th>Простое решение</th>
+            <th>Что проверяли</th>
+            <th>Проверка на новых данных</th>
+            <th>Решение</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="r1">
+            <td class="task">Координатор переписки</td>
+            <td>45 сообщений · 19 событий<br><b>13</b> собраны из нескольких реплик<br>синтетический gold</td>
+            <td>Правила<br><span class="mono">F1 0.732</span><br><span class="mono">связывание 0.000</span></td>
+            <td>Правила + эмбеддинги + LLM + детерминированный валидатор</td>
+            <td>3 живых прогона<br><span class="mono">F1 0.95 ± 0.00</span><br><span class="mono">связывание 0.82 ± 0.04</span></td>
+            <td class="verdict">ВЫПУСТИТЬ<br><span style="font-weight:400;font-size:19px">источник у каждого вывода, действие — за человеком</span></td>
+          </tr>
+          <tr class="r2">
+            <td class="task">Проверка сметы</td>
+            <td>6 391 цена → <b>2 369</b> после очистки<br>22 компании · 7 городов · 47 работ</td>
+            <td>Медиана + коридор P10–P90<br><span class="mono">LOCO 43.5%</span></td>
+            <td>Линейная · XGBoost · текст позиции · классификатор работ</td>
+            <td>Новая компания<br><span class="mono">44.0% MAPE</span><br>выигрыш на 12 из 22</td>
+            <td class="verdict">ОСТАВИТЬ ПРОСТОЕ<br><span style="font-weight:400;font-size:19px">коридор + честный отказ, если работы нет в справочнике</span></td>
+          </tr>
+          <tr class="r3">
+            <td class="task">Рейтинг подрядчика</td>
+            <td>1 212 отзывов<br>ручная разметка <b>108</b> клауз<br>9 аспектов, дисбаланс</td>
+            <td>MiniLM<br><span class="mono">accuracy 0.513</span></td>
+            <td>Эмбеддинги GigaChat</td>
+            <td><span class="mono">accuracy 0.618</span><br>рост есть, для публичной оценки мало</td>
+            <td class="verdict">ОСТАНОВИТЬ<br><span style="font-weight:400;font-size:19px">оставить в R&D, в продукт не выпускать</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="footnote">
+        <span>Правило простоты задано <b>до</b> экспериментов: сложное берём, только если выигрыш больше разброса между фолдами</span>
+        <span><b>Счёт 1 : 2 в пользу простого</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Координатор переписки · выпущено</div>
+      <h1>LLM стоит там,<br><span class="thin">где правила не работают в принципе</span></h1>
+
+      <div class="pipe">
+        <div class="step">
+          <div class="step-n">1</div>
+          <div class="step-name">Правила</div>
+          <div class="step-desc">кандидаты с высоким recall</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <div class="step-name">Эмбеддинги</div>
+          <div class="step-desc">связь реплик по смыслу</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <div class="step-name">LLM</div>
+          <div class="step-desc">тип события и поля</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-n">4</div>
+          <div class="step-name">Валидатор</div>
+          <div class="step-desc">источники и ограничения</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step human">
+          <div class="step-n">5</div>
+          <div class="step-name">Человек</div>
+          <div class="step-desc">подтверждает действие</div>
+        </div>
+      </div>
+
+      <div class="versus">
+        <div class="vs-card hero">
+          <div class="vs-label">Связать несколько реплик в одно событие</div>
+          <div class="vs-row"><span class="vs-who">правила</span><span class="vs-num zero">0.000</span></div>
+          <div class="vs-row"><span class="vs-who">гибрид</span><span class="vs-num strong">0.82</span></div>
+          <p class="vs-note">Правила этого не умеют вообще: сумму называет подрядчик, а согласие приходит через три сообщения.</p>
+        </div>
+
+        <div class="vs-card">
+          <div class="vs-label">Найти событие</div>
+          <div class="vs-row"><span class="vs-who">правила, F1</span><span class="vs-num weak">0.73</span></div>
+          <div class="vs-row"><span class="vs-who">гибрид, F1</span><span class="vs-num strong">0.95</span></div>
+          <p class="vs-note">Разброс по трём живым прогонам — ноль.</p>
+        </div>
+
+        <div class="vs-card">
+          <div class="vs-label">Понять статус согласования</div>
+          <div class="vs-row"><span class="vs-who">правила</span><span class="vs-num weak">0.33</span></div>
+          <div class="vs-row"><span class="vs-who">гибрид</span><span class="vs-num strong">0.90</span></div>
+          <p class="vs-note">Доля событий со ссылкой на источник — 1.00 у обоих.</p>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Корпус <b>синтетический</b>: 45 сообщений, размечены автором. Следующий шаг — обезличенные реальные чаты и независимая разметка</span>
+        <span><b>34.5 ± 1.1 с</b> на 45 сообщений</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 4 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Проверка сметы · оставили простое</div>
+      <h1>Модель проиграла<br><span class="thin">и мы её не выпустили</span></h1>
+      <p class="lede">
+        На случайной разбивке модель уверенно бьёт медиану. Но продукт встречает смету
+        от компании, которой в обучении не было — и там преимущество исчезает.
+      </p>
+
+      <div class="ladder">
+        <div class="rung">
+          <div class="rung-name">Одна медиана на все работы</div>
+          <div class="bar-track"><div class="bar" style="width:100%"></div></div>
+          <div class="rung-num">95.6%</div>
+        </div>
+        <div class="rung">
+          <div class="rung-name">Медиана по виду работы <b>— baseline</b></div>
+          <div class="bar-track"><div class="bar" style="width:45.6%"></div></div>
+          <div class="rung-num">43.6%</div>
+        </div>
+        <div class="rung">
+          <div class="rung-name">Медиана по паре работа + город</div>
+          <div class="bar-track"><div class="bar" style="width:47.0%"></div></div>
+          <div class="rung-num">44.9%</div>
+        </div>
+        <div class="rung">
+          <div class="rung-name"><b>Линейная регрессия</b> · случайная разбивка</div>
+          <div class="bar-track"><div class="bar lose" style="width:40.5%"></div></div>
+          <div class="rung-num">38.7%</div>
+        </div>
+        <div class="rung">
+          <div class="rung-name">XGBoost с тюнингом · случайная разбивка</div>
+          <div class="bar-track"><div class="bar lose" style="width:40.0%"></div></div>
+          <div class="rung-num">38.2%</div>
+        </div>
+      </div>
+
+      <div style="height:26px"></div>
+
+      <div class="versus">
+        <div class="vs-card hero" style="grid-column: span 2">
+          <div class="vs-label">На компании, которой модель не видела (leave-one-company-out, 22 прогона)</div>
+          <div class="vs-row"><span class="vs-who">медиана по виду работы</span><span class="vs-num strong">43.5%</span></div>
+          <div class="vs-row"><span class="vs-who">линейная регрессия</span><span class="vs-num weak">44.0%</span></div>
+          <p class="vs-note">
+            Модель выигрывает лишь на <b>12 компаниях из 22</b>. Причина названа: признак «компания»
+            работал как шпаргалка и при смене источника стал бесполезен.
+          </p>
+        </div>
+
+        <div class="vs-card">
+          <div class="vs-label">Что ещё проверили и закрыли</div>
+          <p class="vs-note" style="margin-top:0">
+            <b>Больше данных.</b> Кривая обучения от 3 до 21 компании — разрыв не открывается.<br><br>
+            <b>Текст позиции.</b> Эмбеддинги и символьные n-граммы: +0.6 п.п. при разбросе 9.9 п.п.<br><br>
+            <b>Потолок признаков.</b> Оракул, знающий работу и город, даёт 37.3% — запас меньше 1.5 п.п.
+          </p>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Найдена и исправлена собственная утечка: квантили считались на всём датасете, включая тестовую компанию <b class="mono">(0.872 → 0.879)</b></span>
+        <span><b>В продукте — коридор, который можно показать подрядчику</b></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 5 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Данные и метрики</div>
+      <h1>Продукт производит<br><span class="thin">собственную разметку</span></h1>
+      <p class="lede">
+        Публичные прайсы может скачать кто угодно, и мы упёрлись в их потолок.
+        Данные, которых нет ни у кого, появляются <b>внутри платформы</b> как побочный
+        продукт обычной работы.
+      </p>
+
+      <div class="loop">
+        <div class="loop-list">
+          <div class="loop-item">
+            <div class="loop-n">1</div>
+            <div><div class="loop-what">Подтвердил или отклонил карточку</div>
+              <div class="loop-label">метка: полезно / ложная тревога</div></div>
+          </div>
+          <div class="loop-item">
+            <div class="loop-n">2</div>
+            <div><div class="loop-what">Смета принята и закрыта</div>
+              <div class="loop-label">контекст объекта + цена + фактический итог</div></div>
+          </div>
+          <div class="loop-item">
+            <div class="loop-n">3</div>
+            <div><div class="loop-what">Возникла доплата</div>
+              <div class="loop-label">метка неполноты исходной сметы</div></div>
+          </div>
+          <div class="loop-item">
+            <div class="loop-n">4</div>
+            <div><div class="loop-what">План сравнили с фактом</div>
+              <div class="loop-label">метка риска срока и бюджета</div></div>
+          </div>
+          <div class="loop-item">
+            <div class="loop-n">5</div>
+            <div><div class="loop-what">Фото прошло приёмку</div>
+              <div class="loop-label">метка качества этапа</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Почему это снимает наш потолок</h3>
+          <p>
+            Цену внутри одного вида работ определяют площадь объекта, объём, класс отделки
+            и состояние помещения. В публичных прайс-листах этих полей <b style="color:#fff">нет вообще</b> —
+            поэтому больше прайсов и не помогает.
+          </p>
+          <div class="rule"></div>
+          <p>
+            В проекте на платформе они известны по определению. Вместе с исходами
+            подтверждений это даёт первую в проекте <b style="color:#fff">настоящую разметку</b>.
+          </p>
+          <div class="rule"></div>
+          <div class="big">North star: доля значимых изменений, зафиксированных до финансового последствия</div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Качество ИИ: precision · recall · связывание · доля отказов &nbsp;|&nbsp; Польза: время до подтверждения · пропуски &nbsp;|&nbsp; Бизнес: конверсия в подписку · retention</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 6 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Разработка с AI-агентами</div>
+      <h1>Что делегировал<br><span class="thin">и что это дало</span></h1>
+
+      <div class="split">
+        <div>
+          <div class="col-head">Что делегировал</div>
+          <div class="did">
+            <div class="did-item">
+              <div class="did-n">01</div>
+              <div><div class="did-t">Декомпозиция исследования</div>
+                <div class="did-d">гипотезы · план экспериментов · критерии остановки</div></div>
+            </div>
+            <div class="did-item">
+              <div class="did-n">02</div>
+              <div><div class="did-t">Код и автоматизация</div>
+                <div class="did-d">скраперы · пайплайны · тесты · API</div></div>
+            </div>
+            <div class="did-item">
+              <div class="did-n">03</div>
+              <div><div class="did-t">Критическое ревью</div>
+                <div class="did-d">поиск утечек · слабых метрик · переобещаний</div></div>
+            </div>
+            <div class="did-item">
+              <div class="did-n">04</div>
+              <div><div class="did-t">Документация</div>
+                <div class="did-d">отчёты · журнал решений · материалы к защите</div></div>
+            </div>
+          </div>
+
+          <div style="height:30px"></div>
+          <div class="col-head">Как проверял результат</div>
+          <p style="font-size:22px;line-height:1.45;color:var(--ink-2)">
+            Каждый вывод агента обязан быть воспроизводим скриптом и проверен на отложенных
+            данных. Решение «выпустить / упростить / остановить» принимал сам — по правилу,
+            заданному до эксперимента.
+          </p>
+        </div>
+
+        <div>
+          <div class="col-head">Эффект</div>
+          <div class="effect">
+            <div class="fx">
+              <div class="fx-num">5 → 2</div>
+              <div class="fx-text">гипотез проверено, <b>три закрыты отрицательным результатом</b> — цена, текст позиции, классификатор работ</div>
+            </div>
+            <div class="fx">
+              <div class="fx-num">1</div>
+              <div class="fx-text">найдена и исправлена <b>утечка признака</b> в кросс-валидации по компаниям</div>
+            </div>
+            <div class="fx">
+              <div class="fx-num">121</div>
+              <div class="fx-text">тест, сеть в них не используется — <b>результат воспроизводится</b> без внешних вызовов</div>
+            </div>
+            <div class="fx">
+              <div class="fx-num">3</div>
+              <div class="fx-text">преувеличения в формулировках пойманы внешним ревью и <b>исправлены</b></div>
+            </div>
+          </div>
+
+          <div style="height:24px"></div>
+          <div class="panel" style="border-color:var(--blue);background:var(--blue-deep)">
+            <div class="big">Агент ускоряет перебор гипотез.<br>Решение о выпуске остаётся за человеком.</div>
+            <p style="color:#BFD4F5">Ни одна модель не попала в продукт, не пройдя проверку на данных, которых она не видела.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Отрицательный результат с честной валидацией стоит дороже выпущенной модели без неё</span>
+        <span><b>Счёт 1 : 2 в пользу простого</b></span>
+      </div>
+    </div>
+  </div>
+
+</div>
