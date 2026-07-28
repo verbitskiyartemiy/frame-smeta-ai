@@ -80,8 +80,8 @@
   h1 .thin { color: var(--ink); }
 
   .lede {
-    font-size: 24px; line-height: 1.4; color: var(--ink-2);
-    max-width: 1300px; margin-bottom: 26px;
+    font-size: 23px; line-height: 1.35; color: var(--ink-2);
+    max-width: 1300px; margin-bottom: 18px;
   }
   .lede b { color: var(--ink); }
 
@@ -94,7 +94,7 @@
   }
 
   /* ---------- чат ---------- */
-  .chat { display: flex; flex-direction: column; gap: 12px; }
+  .chat { display: flex; flex-direction: column; gap: 10px; }
 
   .msg { display: grid; grid-template-columns: 46px 1fr; gap: 14px; align-items: start; }
   .msg.me { grid-template-columns: 1fr 46px; }
@@ -109,8 +109,8 @@
   .msg.me .who { background: var(--blue); }
 
   .bubble {
-    border-radius: 16px; padding: 14px 18px;
-    font-size: 21px; line-height: 1.35; background: var(--wash);
+    border-radius: 16px; padding: 12px 16px;
+    font-size: 20px; line-height: 1.3; background: var(--wash);
   }
   .msg.me .bubble { background: var(--blue); color: #fff; }
 
@@ -127,8 +127,8 @@
 
   /* ---------- карточка ---------- */
   .card {
-    border: 3px solid var(--ink); border-radius: 20px; padding: 28px 32px;
-    background: #fff; display: flex; flex-direction: column; gap: 12px;
+    border: 3px solid var(--ink); border-radius: 20px; padding: 22px 28px;
+    background: #fff; display: flex; flex-direction: column; gap: 10px;
   }
 
   .card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -140,7 +140,7 @@
   .chip-new { background: var(--blue); color: #fff; }
 
   .card-amount {
-    font-family: var(--mono); font-size: 58px; font-weight: 700;
+    font-family: var(--mono); font-size: 50px; font-weight: 700;
     color: var(--amber); line-height: 1;
   }
 
@@ -168,34 +168,52 @@
 
   /* ---------- нижняя полоса ---------- */
   .punch {
-    margin-top: auto; padding-top: 20px; border-top: 3px solid var(--ink);
-    display: grid; grid-template-columns: 1.6fr 1fr; gap: 40px; align-items: center;
+    margin-top: auto; padding-top: 14px; border-top: 3px solid var(--ink);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
   }
 
-  .punch-text { font-size: 25px; line-height: 1.35; }
+  .punch-text { font-size: 23px; line-height: 1.35; }
   .punch-text b { color: var(--blue-deep); }
 
-  .duel { display: flex; gap: 32px; justify-content: flex-end; }
-  .duel-item { text-align: right; }
-  .duel-n {
-    font-family: var(--mono); font-size: 46px; font-weight: 700; line-height: 1;
+  .punch-note {
+    display: block; margin-top: 8px; font-size: 17px;
+    line-height: 1.35; color: var(--ink-3);
   }
-  .duel-n.zero { color: var(--ink-3); }
-  .duel-n.win { color: var(--green); }
-  .duel-l { font-size: 17px; color: var(--ink-2); margin-top: 4px; }
+
+  .metrics { border: 2px solid var(--line); border-radius: 14px; overflow: hidden; }
+
+  .m-head, .m-row {
+    display: grid; grid-template-columns: 1fr 92px 92px;
+    align-items: center; padding: 7px 18px;
+  }
+
+  .m-head {
+    background: var(--ink); color: #fff; font-size: 13px; font-weight: 800;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  .m-head span:not(:first-child) { text-align: right; }
+
+  .m-row + .m-row { border-top: 2px solid var(--line); }
+  .m-name { font-size: 18px; color: var(--ink-2); }
+  .m-v {
+    font-family: var(--mono); font-size: 22px; font-weight: 700;
+    text-align: right; color: var(--ink-3);
+  }
+  .m-v.win { color: var(--green); }
+  .m-v.zero { color: #B91C1C; }
 
   /* ---------- слайд 2 ---------- */
-  .qa-flow { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+  .qa-flow { display: flex; flex-direction: column; gap: 14px; flex: 1; }
 
   .ask {
     background: var(--blue); color: #fff; border-radius: 18px;
-    padding: 22px 28px; font-size: 28px; font-weight: 700;
+    padding: 18px 26px; font-size: 26px; font-weight: 700;
     align-self: flex-start; max-width: 900px;
   }
 
   .answer-box {
-    border: 3px solid var(--line); border-radius: 18px; padding: 24px 30px;
-    display: flex; flex-direction: column; gap: 14px;
+    border: 3px solid var(--line); border-radius: 18px; padding: 18px 26px;
+    display: flex; flex-direction: column; gap: 11px;
   }
 
   .answer-text { font-size: 25px; line-height: 1.4; }
@@ -211,7 +229,7 @@
   .action-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 30px; border: 3px solid var(--ink); border-radius: 18px;
-    padding: 22px 28px; background: #fff;
+    padding: 16px 26px; background: #fff;
   }
 
   .action-label {
@@ -224,11 +242,36 @@
 
   .guard {
     border-left: 5px solid var(--blue); background: var(--wash);
-    padding: 18px 22px; display: flex; flex-direction: column; gap: 5px;
+    padding: 14px 20px; display: flex; flex-direction: column; gap: 5px;
   }
   .guard-t { font-size: 21px; font-weight: 800; }
   .guard-d { font-size: 18px; line-height: 1.35; color: var(--ink-2); }
   .guard-d b { color: var(--ink); }
+
+  .guard-check {
+    margin-top: 4px; font-size: 15px; color: var(--ink-3);
+    font-style: italic;
+  }
+
+  .measured {
+    border-top: 3px solid var(--ink); padding-top: 14px; margin-top: 2px;
+  }
+
+  .meas-title {
+    font-size: 15px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px;
+  }
+
+  .meas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; }
+
+  .meas { display: flex; align-items: baseline; gap: 12px; }
+  .meas-n {
+    font-family: var(--mono); font-size: 32px; font-weight: 700;
+    color: var(--blue-deep); line-height: 1;
+  }
+  .meas-l { font-size: 17px; line-height: 1.3; color: var(--ink-2); }
+  .meas.warn .meas-n { color: var(--amber); }
+  .meas.warn .meas-l b { color: var(--amber); }
 
   .footnote {
     margin-top: auto; padding-top: 15px; border-top: 2px solid var(--line);
@@ -325,17 +368,30 @@
       <div class="punch">
         <div class="punch-text">
           Правила видят здесь <b>четыре отдельных сообщения</b>. Связать их
-          в одно событие они не могут в принципе — сумма и согласие
-          разнесены по времени.
+          в одно событие они не могут в принципе.
+          <span class="punch-note">
+            Сравнение на размеченном корпусе переписок. Проверено, что вывод
+            без ссылки на сообщение не выпускается никогда.
+          </span>
         </div>
-        <div class="duel">
-          <div class="duel-item">
-            <div class="duel-n zero">0.000</div>
-            <div class="duel-l">правила</div>
+
+        <div class="metrics">
+          <div class="m-head"><span></span><span>правила</span><span>AI</span></div>
+          <div class="m-row">
+            <span class="m-name">Связано реплик в одно событие</span>
+            <span class="m-v zero">0.00</span><span class="m-v win">0.82</span>
           </div>
-          <div class="duel-item">
-            <div class="duel-n win">0.82</div>
-            <div class="duel-l">AI-координатор</div>
+          <div class="m-row">
+            <span class="m-name">Найдено событий, F1</span>
+            <span class="m-v">0.73</span><span class="m-v win">0.95</span>
+          </div>
+          <div class="m-row">
+            <span class="m-name">Понят статус согласования</span>
+            <span class="m-v">0.33</span><span class="m-v win">0.90</span>
+          </div>
+          <div class="m-row">
+            <span class="m-name">Есть ссылка на источник</span>
+            <span class="m-v">1.00</span><span class="m-v win">1.00</span>
           </div>
         </div>
       </div>
@@ -380,19 +436,36 @@
         <div class="guards">
           <div class="guard">
             <div class="guard-t">Числа считает продукт</div>
-            <div class="guard-d">Модель их только переписывает.
-              Сумма, которой нет в источниках, <b>до пользователя не доходит</b> —
-              это проверяет код</div>
+            <div class="guard-d">Сумма, которой нет в источниках,
+              <b>до пользователя не доходит</b> — отклоняет код, не промпт</div>
+            <div class="guard-check">проверено тестом на выдуманной сумме</div>
           </div>
           <div class="guard">
             <div class="guard-t">Нет данных — нет ответа</div>
-            <div class="guard-d">На вопрос вне проекта помощник отвечает
-              <b>отказом с объяснением</b>, а не догадкой</div>
+            <div class="guard-d">На вопрос вне проекта — <b>отказ
+              с объяснением</b>, а не догадка</div>
+            <div class="guard-check">проверено тестом на отказ</div>
           </div>
           <div class="guard">
             <div class="guard-t">Действие не выполняется само</div>
-            <div class="guard-d">Задача и напоминание создаются
-              <b>только после подтверждения</b> человеком</div>
+            <div class="guard-d">Задача создаётся <b>только после
+              подтверждения</b> человеком</div>
+            <div class="guard-check">статус pending до нажатия</div>
+          </div>
+        </div>
+
+        <div class="measured">
+          <div class="meas-title">Чем проверено</div>
+          <div class="meas-grid">
+            <div class="meas"><span class="meas-n">133</span>
+              <span class="meas-l">теста, сеть не используется</span></div>
+            <div class="meas"><span class="meas-n">6</span>
+              <span class="meas-l">из них на гарантии помощника</span></div>
+            <div class="meas"><span class="meas-n">1.00</span>
+              <span class="meas-l">доля ответов со ссылкой на источник</span></div>
+            <div class="meas warn"><span class="meas-n">—</span>
+              <span class="meas-l"><b>качество ответов не измерено</b>,
+                размеченных вопросов пока нет</span></div>
           </div>
         </div>
       </div>
