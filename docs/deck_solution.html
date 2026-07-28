@@ -1,0 +1,407 @@
+<title>FRAME · основное решение</title>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --blue: #1F6FEB;
+    --blue-deep: #0B3D91;
+    --blue-wash: #EAF1FE;
+    --ink: #0B1220;
+    --ink-2: #475569;
+    --ink-3: #94A3B8;
+    --line: #DBE3EC;
+    --wash: #F4F7FA;
+    --green: #0F8A5F;
+    --green-wash: #E3F5ED;
+    --amber: #B45309;
+    --amber-wash: #FDF0DC;
+    --sans: "Segoe UI", "Inter", system-ui, -apple-system, Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", monospace;
+  }
+
+  body {
+    background: #303743;
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 28px; padding: 28px 16px 60px;
+  }
+
+  .note {
+    max-width: 1000px; color: #C9D2DE; font-size: 14px; line-height: 1.6;
+    background: #262C36; border-left: 3px solid var(--blue); padding: 14px 18px;
+  }
+  .note b { color: #fff; }
+
+  .frame {
+    width: 100%; max-width: 1920px; aspect-ratio: 16 / 9;
+    container-type: size; background: #fff;
+    box-shadow: 0 14px 40px rgba(0,0,0,.35); overflow: hidden; position: relative;
+  }
+
+  .slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px;
+    transform-origin: top left; scale: calc(100cqw / 1920);
+    padding: 58px 76px 50px; display: flex; flex-direction: column;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px;
+  }
+
+  .slide::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(155deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.97) 55%);
+    pointer-events: none;
+  }
+  .slide > * { position: relative; }
+
+  .badge {
+    position: absolute; top: 40px; right: 68px; z-index: 2;
+    font-size: 22px; font-weight: 800; letter-spacing: .04em;
+    border: 2px solid var(--ink); border-radius: 999px; padding: 10px 26px;
+  }
+
+  .kicker {
+    font-size: 18px; font-weight: 700; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 62px; font-weight: 800; letter-spacing: -.02em;
+    line-height: 1.02; text-transform: uppercase; color: var(--blue);
+    margin-bottom: 8px;
+  }
+  h1 .thin { color: var(--ink); }
+
+  .lede {
+    font-size: 24px; line-height: 1.4; color: var(--ink-2);
+    max-width: 1300px; margin-bottom: 26px;
+  }
+  .lede b { color: var(--ink); }
+
+  .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; flex: 1; }
+
+  .panel-head {
+    font-size: 18px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding-bottom: 10px; border-bottom: 2px solid var(--line); margin-bottom: 18px;
+  }
+
+  /* ---------- чат ---------- */
+  .chat { display: flex; flex-direction: column; gap: 12px; }
+
+  .msg { display: grid; grid-template-columns: 46px 1fr; gap: 14px; align-items: start; }
+  .msg.me { grid-template-columns: 1fr 46px; }
+  .msg.me .who { order: 2; }
+  .msg.me .bubble { order: 1; }
+
+  .who {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800; color: #fff; background: #F0B429;
+  }
+  .msg.me .who { background: var(--blue); }
+
+  .bubble {
+    border-radius: 16px; padding: 14px 18px;
+    font-size: 21px; line-height: 1.35; background: var(--wash);
+  }
+  .msg.me .bubble { background: var(--blue); color: #fff; }
+
+  .bubble .num { font-weight: 800; }
+  .msg.tagged .bubble { box-shadow: 0 0 0 3px var(--blue); }
+
+  .tag {
+    display: inline-block; margin-left: 8px; vertical-align: middle;
+    font-family: var(--mono); font-size: 15px; font-weight: 700;
+    color: var(--blue); background: #fff;
+    border: 2px solid var(--blue); border-radius: 6px; padding: 1px 7px;
+  }
+  .msg.me .tag { background: #fff; }
+
+  /* ---------- карточка ---------- */
+  .card {
+    border: 3px solid var(--ink); border-radius: 20px; padding: 28px 32px;
+    background: #fff; display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .card-title { font-size: 30px; font-weight: 800; }
+  .chip {
+    font-size: 16px; font-weight: 700; border-radius: 999px;
+    padding: 5px 14px; background: var(--amber-wash); color: var(--amber);
+  }
+  .chip-new { background: var(--blue); color: #fff; }
+
+  .card-amount {
+    font-family: var(--mono); font-size: 58px; font-weight: 700;
+    color: var(--amber); line-height: 1;
+  }
+
+  .card-desc { font-size: 21px; line-height: 1.4; color: var(--ink-2); }
+
+  .card-src { display: flex; flex-wrap: wrap; gap: 8px; }
+  .src {
+    font-family: var(--mono); font-size: 16px; font-weight: 700;
+    border: 2px solid var(--line); border-radius: 8px; padding: 5px 12px;
+    color: var(--ink-2);
+  }
+
+  .card-actions { display: flex; gap: 12px; margin-top: 4px; }
+  .btn {
+    font-size: 19px; font-weight: 700; border-radius: 12px; padding: 13px 24px;
+    background: var(--ink); color: #fff;
+  }
+  .btn-ghost { background: #fff; color: var(--ink-2); border: 2px solid var(--line); }
+
+  .human {
+    font-size: 19px; color: var(--ink-2); border-left: 4px solid var(--green);
+    background: var(--green-wash); padding: 12px 18px; border-radius: 0 10px 10px 0;
+  }
+  .human b { color: var(--ink); }
+
+  /* ---------- нижняя полоса ---------- */
+  .punch {
+    margin-top: auto; padding-top: 20px; border-top: 3px solid var(--ink);
+    display: grid; grid-template-columns: 1.6fr 1fr; gap: 40px; align-items: center;
+  }
+
+  .punch-text { font-size: 25px; line-height: 1.35; }
+  .punch-text b { color: var(--blue-deep); }
+
+  .duel { display: flex; gap: 32px; justify-content: flex-end; }
+  .duel-item { text-align: right; }
+  .duel-n {
+    font-family: var(--mono); font-size: 46px; font-weight: 700; line-height: 1;
+  }
+  .duel-n.zero { color: var(--ink-3); }
+  .duel-n.win { color: var(--green); }
+  .duel-l { font-size: 17px; color: var(--ink-2); margin-top: 4px; }
+
+  /* ---------- слайд 2 ---------- */
+  .qa-flow { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+
+  .ask {
+    background: var(--blue); color: #fff; border-radius: 18px;
+    padding: 22px 28px; font-size: 28px; font-weight: 700;
+    align-self: flex-start; max-width: 900px;
+  }
+
+  .answer-box {
+    border: 3px solid var(--line); border-radius: 18px; padding: 24px 30px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .answer-text { font-size: 25px; line-height: 1.4; }
+  .answer-text b { color: var(--blue-deep); }
+
+  .sources { display: flex; flex-wrap: wrap; gap: 10px; }
+  .source-pill {
+    font-size: 17px; border-radius: 10px; padding: 8px 14px;
+    background: var(--wash); color: var(--ink-2);
+  }
+  .source-pill b { color: var(--ink); }
+
+  .action-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 30px; border: 3px solid var(--ink); border-radius: 18px;
+    padding: 22px 28px; background: #fff;
+  }
+
+  .action-label {
+    font-size: 16px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px;
+  }
+  .action-title { font-size: 28px; font-weight: 800; }
+
+  .guards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+
+  .guard {
+    border-left: 5px solid var(--blue); background: var(--wash);
+    padding: 18px 22px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .guard-t { font-size: 21px; font-weight: 800; }
+  .guard-d { font-size: 18px; line-height: 1.35; color: var(--ink-2); }
+  .guard-d b { color: var(--ink); }
+
+  .footnote {
+    margin-top: auto; padding-top: 15px; border-top: 2px solid var(--line);
+    font-size: 17px; color: var(--ink-3);
+    display: flex; justify-content: space-between; gap: 40px;
+  }
+  .footnote b { color: var(--ink-2); }
+</style>
+
+<div class="deck">
+
+  <div class="note">
+    Два слайда про <b>работающее решение</b> — без лестниц baseline и отрицательных
+    результатов. Формат 1920×1080, стилистика твоего дека. Первый — координатор
+    переписки, второй — помощник по проекту.
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Основное решение · координатор переписки</div>
+      <h1>Договорённость из чата<br><span class="thin">становится строкой бюджета</span></h1>
+      <p class="lede">
+        Доплаты и решения тонут в переписке: сумму называют в одном сообщении,
+        соглашаются через три. <b>AI собирает это в одно событие и передаёт человеку
+        на подтверждение.</b>
+      </p>
+
+      <div class="stage">
+        <div>
+          <div class="panel-head">Как выглядит в чате</div>
+          <div class="chat">
+            <div class="msg tagged">
+              <div class="who">ИВ</div>
+              <div class="bubble">
+                Вскрыли стены на кухне: проводка старая, алюминий.
+                Полная замена будет <span class="num">+12 000 ₽</span>
+                <span class="tag">#1</span>
+              </div>
+            </div>
+            <div class="msg me tagged">
+              <div class="who">Вы</div>
+              <div class="bubble">Это если менять полностью, без частичного ремонта?
+                <span class="tag">#2</span></div>
+            </div>
+            <div class="msg tagged">
+              <div class="who">ИВ</div>
+              <div class="bubble">
+                Частично не советую: старые скрутки греются, это риск перегрева
+                <span class="tag">#3</span>
+              </div>
+            </div>
+            <div class="msg me tagged">
+              <div class="who">Вы</div>
+              <div class="bubble">Понял, тогда меняем полностью
+                <span class="tag">#4</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-head">Что видит заказчик</div>
+          <div class="card">
+            <div class="card-top">
+              <span class="card-title">Замена проводки на кухне</span>
+              <span class="chip">изменение бюджета</span>
+              <span class="chip chip-new">новое</span>
+            </div>
+            <div class="card-amount">+12 000 ₽</div>
+            <div class="card-desc">
+              Полная замена алюминиевой проводки. Сумму назвал электрик,
+              согласие заказчика найдено в этой же ветке.
+            </div>
+            <div class="card-src">
+              <span class="src">#1 сумма</span>
+              <span class="src">#2 уточнение</span>
+              <span class="src">#3 риск</span>
+              <span class="src">#4 согласие</span>
+            </div>
+            <div class="card-actions">
+              <span class="btn">Согласовать доплату</span>
+              <span class="btn btn-ghost">Это не так</span>
+            </div>
+          </div>
+
+          <div class="human" style="margin-top:18px">
+            <b>Действие выполняет человек.</b> AI предлагает, но ничего не
+            согласовывает сам — и каждый вывод ссылается на конкретные сообщения.
+          </div>
+        </div>
+      </div>
+
+      <div class="punch">
+        <div class="punch-text">
+          Правила видят здесь <b>четыре отдельных сообщения</b>. Связать их
+          в одно событие они не могут в принципе — сумма и согласие
+          разнесены по времени.
+        </div>
+        <div class="duel">
+          <div class="duel-item">
+            <div class="duel-n zero">0.000</div>
+            <div class="duel-l">правила</div>
+          </div>
+          <div class="duel-item">
+            <div class="duel-n win">0.82</div>
+            <div class="duel-l">AI-координатор</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <div class="kicker">Основное решение · помощник по проекту</div>
+      <h1>Отвечает про <span class="thin">ваш ремонт,</span><br>а не про ремонт вообще</h1>
+      <p class="lede">
+        Помощник видит состояние проекта — бюджет, этапы, смету, подтверждённые
+        доплаты — и знает требования к этапам ремонта. <b>Поэтому отвечает не общими
+        словами, а по вашему объекту, и предлагает следующий шаг.</b>
+      </p>
+
+      <div class="qa-flow">
+        <div class="ask">Что мне нужно сделать перед приёмкой электрики?</div>
+
+        <div class="answer-box">
+          <div class="answer-text">
+            Перед приёмкой электрики запросите у <b>Игоря Волкова</b> акт скрытых
+            работ и фотофиксацию трасс кабеля до закрытия штукатуркой.
+            Этап идёт до 18 мая, штукатурные работы начинаются после него.
+          </div>
+          <div class="sources">
+            <span class="source-pill">из проекта: <b>этап «Электромонтаж», срок и ответственный</b></span>
+            <span class="source-pill">из базы знаний: <b>приёмка электромонтажа, скрытые работы</b></span>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <div>
+            <div class="action-label">Предложенное действие</div>
+            <div class="action-title">Запросить у Игоря Волкова акт скрытых работ</div>
+          </div>
+          <span class="btn">Создать напоминание</span>
+        </div>
+
+        <div class="guards">
+          <div class="guard">
+            <div class="guard-t">Числа считает продукт</div>
+            <div class="guard-d">Модель их только переписывает.
+              Сумма, которой нет в источниках, <b>до пользователя не доходит</b> —
+              это проверяет код</div>
+          </div>
+          <div class="guard">
+            <div class="guard-t">Нет данных — нет ответа</div>
+            <div class="guard-d">На вопрос вне проекта помощник отвечает
+              <b>отказом с объяснением</b>, а не догадкой</div>
+          </div>
+          <div class="guard">
+            <div class="guard-t">Действие не выполняется само</div>
+            <div class="guard-d">Задача и напоминание создаются
+              <b>только после подтверждения</b> человеком</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <span>Персонализация приходит из контекста проекта, а не из дообучения модели — тот же принцип, что у WHOOP Coach</span>
+        <span><b>Одно ядро: поиск → LLM → валидатор → человек</b></span>
+      </div>
+    </div>
+  </div>
+
+</div>
