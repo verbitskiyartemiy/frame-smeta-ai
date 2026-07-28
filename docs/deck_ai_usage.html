@@ -1,0 +1,379 @@
+<title>FRAME · как я применял ИИ в работе</title>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --blue: #1F6FEB;
+    --blue-deep: #0B3D91;
+    --blue-wash: #EAF1FE;
+    --ink: #0B1220;
+    --ink-2: #475569;
+    --ink-3: #94A3B8;
+    --line: #DBE3EC;
+    --wash: #F4F7FA;
+    --green: #0F8A5F;
+    --green-wash: #E3F5ED;
+    --amber: #B45309;
+    --amber-wash: #FDF0DC;
+    --sans: "Segoe UI", "Inter", system-ui, -apple-system, Arial, sans-serif;
+    --mono: Consolas, "Cascadia Mono", "SF Mono", monospace;
+  }
+
+  body {
+    background: #303743; font-family: var(--sans); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 28px; padding: 28px 16px 60px;
+  }
+
+  .note {
+    max-width: 1000px; color: #C9D2DE; font-size: 14px; line-height: 1.6;
+    background: #262C36; border-left: 3px solid var(--blue); padding: 14px 18px;
+  }
+  .note b { color: #fff; }
+
+  .frame {
+    width: 100%; max-width: 1920px; aspect-ratio: 16 / 9;
+    container-type: size; background: #fff;
+    box-shadow: 0 14px 40px rgba(0,0,0,.35); overflow: hidden; position: relative;
+  }
+
+  .slide {
+    position: absolute; inset: 0; width: 1920px; height: 1080px;
+    transform-origin: top left; scale: calc(100cqw / 1920);
+    padding: 50px 68px 44px; display: flex; flex-direction: column;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 120px 120px, 120px 120px;
+  }
+
+  .slide::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(155deg, rgba(255,255,255,.88) 0%, rgba(255,255,255,.97) 55%);
+    pointer-events: none;
+  }
+  .slide > * { position: relative; }
+
+  .badge {
+    position: absolute; top: 36px; right: 62px; z-index: 2;
+    font-size: 20px; font-weight: 800; letter-spacing: .04em;
+    border: 2px solid var(--ink); border-radius: 999px; padding: 9px 24px;
+  }
+
+  h1 {
+    font-size: 56px; font-weight: 800; letter-spacing: -.02em;
+    line-height: 1; text-transform: uppercase; color: var(--blue);
+    margin-bottom: 10px;
+  }
+  h1 .thin { color: var(--ink); }
+
+  .lede {
+    font-size: 22px; line-height: 1.35; color: var(--ink-2);
+    max-width: 1500px; margin-bottom: 22px;
+  }
+  .lede b { color: var(--ink); }
+
+  /* ---------- четыре этапа ---------- */
+  .stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+
+  .stage {
+    border: 2px solid var(--line); border-radius: 16px;
+    display: flex; flex-direction: column; overflow: hidden; background: #fff;
+  }
+
+  .stage-head {
+    background: var(--ink); color: #fff; padding: 12px 18px;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .stage-n {
+    font-family: var(--mono); font-size: 15px; color: var(--blue);
+    font-weight: 700;
+  }
+  .stage-name {
+    font-size: 19px; font-weight: 800; letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .stage-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 11px; }
+
+  .block-label {
+    font-size: 13px; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+
+  ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  li {
+    font-size: 16px; line-height: 1.3; color: var(--ink-2);
+    padding-left: 14px; position: relative;
+  }
+  li::before {
+    content: ""; position: absolute; left: 0; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--blue);
+  }
+
+  .checked li::before { background: var(--green); }
+
+  .effect {
+    margin-top: auto; border-top: 2px solid var(--line);
+    padding: 12px 18px 14px; background: var(--wash);
+  }
+  .effect-text { font-size: 16px; line-height: 1.35; color: var(--ink); }
+  .effect-text b { color: var(--blue-deep); }
+  .effect-short {
+    margin-top: 7px; font-size: 15px; line-height: 1.3;
+    color: var(--ink-2); font-style: italic;
+  }
+
+  /* ---------- результат ---------- */
+  .result {
+    margin-top: 20px; border: 3px solid var(--ink); border-radius: 18px;
+    display: grid; grid-template-columns: 1.35fr 1fr; overflow: hidden;
+  }
+
+  .result-left { padding: 13px 24px; }
+  .result-title {
+    font-size: 15px; font-weight: 800; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px;
+  }
+
+  .outcomes { display: flex; flex-direction: column; gap: 4px; }
+  .outcome {
+    display: grid; grid-template-columns: 24px 1fr; gap: 9px;
+    font-size: 17px; line-height: 1.3;
+  }
+  .outcome-mark { font-family: var(--mono); font-weight: 700; }
+  .outcome.go .outcome-mark { color: var(--green); }
+  .outcome.simple .outcome-mark { color: var(--amber); }
+  .outcome.stop .outcome-mark { color: var(--ink-3); }
+  .outcome b { color: var(--ink); }
+
+  .result-right {
+    background: var(--ink); color: #fff; padding: 13px 24px;
+    display: flex; align-items: center; justify-content: space-around; gap: 20px;
+  }
+  .big { text-align: center; }
+  .big-n {
+    font-family: var(--mono); font-size: 48px; font-weight: 700;
+    line-height: 1; color: #fff;
+  }
+  .big-l { font-size: 15px; color: #B8C4D4; margin-top: 6px; }
+
+  .footnote {
+    margin-top: 16px; padding-top: 13px; border-top: 2px solid var(--line);
+    display: flex; justify-content: space-between; gap: 40px; align-items: baseline;
+  }
+  .closing { font-size: 21px; line-height: 1.3; color: var(--ink); max-width: 1150px; }
+  .closing b { color: var(--blue-deep); }
+  .tools {
+    font-family: var(--mono); font-size: 16px; color: var(--ink-3);
+    white-space: nowrap;
+  }
+</style>
+
+<div class="deck">
+
+  <div class="note">
+    Слайд под критерий <b>«применение ИИ»</b>: не про функции внутри продукта,
+    а про то, как ИИ применялся при создании проекта. Формат 1920×1080.
+    Инструменты в правом нижнем углу поправь под то, чем пользовался на самом деле.
+  </div>
+
+  <div class="frame">
+    <div class="slide">
+      <div class="badge">ITMO</div>
+      <h1>Как я применял ИИ <span class="thin">в работе над ФРЕЙМ</span></h1>
+      <p class="lede">
+        ИИ-агенты работали на всём цикле — от исследования до работающего прототипа.
+        <b>Каждый результат проходил проверку прежде, чем стать продуктовым решением.</b>
+      </p>
+
+      <div class="stages">
+
+        <!-- 1 -->
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-n">01</span>
+            <span class="stage-name">Исследование</span>
+          </div>
+          <div class="stage-body">
+            <div>
+              <div class="block-label">Поручал ИИ</div>
+              <ul>
+                <li>Анализ рынка и конкурентов</li>
+                <li>Разбор пользовательских дискуссий</li>
+                <li>Группировку жалоб в темы</li>
+                <li>Синтетические профили для расширения гипотез</li>
+              </ul>
+            </div>
+            <div>
+              <div class="block-label">Как проверял</div>
+              <ul class="checked">
+                <li>Рыночные факты — по первоисточникам</li>
+                <li>5 глубинных интервью с реальными людьми</li>
+                <li>Тест прототипа на 20 респондентах</li>
+              </ul>
+            </div>
+          </div>
+          <div class="effect">
+            <div class="effect-text">
+              Выделено <b>6 групп проблем</b>, выбран главный сценарий — потеря
+              договорённостей и денежных изменений в переписке
+            </div>
+            <div class="effect-short">
+              ИИ расширял гипотезы, подтверждали или опровергали их живые пользователи
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 -->
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-n">02</span>
+            <span class="stage-name">Data Science</span>
+          </div>
+          <div class="stage-body">
+            <div>
+              <div class="block-label">Поручал ИИ</div>
+              <ul>
+                <li>Парсеры, очистку и нормализацию данных</li>
+                <li>Исследовательские скрипты</li>
+                <li>Сравнение моделей с простыми решениями</li>
+                <li>Аудит признаков и поиск утечек</li>
+              </ul>
+            </div>
+            <div>
+              <div class="block-label">Как проверял</div>
+              <ul class="checked">
+                <li>Каждую модель — против простого baseline</li>
+                <li>Leave-one-company-out по 22 компаниям</li>
+                <li>Повторные прогоны, воспроизводимые отчёты</li>
+              </ul>
+            </div>
+          </div>
+          <div class="effect">
+            <div class="effect-text">
+              Найдено, что модель запоминала ценовой уровень компании. На новых
+              компаниях преимущество исчезло — <b>ML-детектор не выпущен</b>
+            </div>
+            <div class="effect-short">
+              ИИ ускорил эксперимент, вывод принимался только после строгой проверки
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-n">03</span>
+            <span class="stage-name">Разработка</span>
+          </div>
+          <div class="stage-body">
+            <div>
+              <div class="block-label">Поручал ИИ</div>
+              <ul>
+                <li>Интеграцию GigaChat и Embeddings</li>
+                <li>Гибридный координатор и извлечение событий</li>
+                <li>Поиск по базе знаний, помощника по проекту</li>
+                <li>Валидаторы, тесты, документацию, ревью кода</li>
+              </ul>
+            </div>
+            <div>
+              <div class="block-label">Как проверял</div>
+              <ul class="checked">
+                <li>Автотесты и production-сборка</li>
+                <li>Живые сценарии в браузере</li>
+                <li>Блокировку неподтверждённых чисел</li>
+              </ul>
+            </div>
+          </div>
+          <div class="effect">
+            <div class="effect-text">
+              Работающий прототип координатора и помощника,
+              <b>133 теста</b> в репозитории
+            </div>
+            <div class="effect-short">
+              ИИ писал и проверял код, результат принимался после запуска тестов
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 -->
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-n">04</span>
+            <span class="stage-name">Продукт и защита</span>
+          </div>
+          <div class="stage-body">
+            <div>
+              <div class="block-label">Поручал ИИ</div>
+              <ul>
+                <li>Итерации интерфейса и демо-сценариев</li>
+                <li>Поиск слабых мест в продуктовой логике</li>
+                <li>Ревью презентации по критериям конкурса</li>
+                <li>Каверзные вопросы и сценарий защиты</li>
+              </ul>
+            </div>
+            <div>
+              <div class="block-label">Как проверял</div>
+              <ul class="checked">
+                <li>Прототип тестировали реальные пользователи</li>
+                <li>Числа сверены с кодом и отчётами</li>
+                <li>Неподтверждённые формулировки удалены</li>
+              </ul>
+            </div>
+          </div>
+          <div class="effect">
+            <div class="effect-text">
+              Один человек прошёл <b>продуктовый, аналитический, инженерный
+              и коммуникационный</b> цикл проекта
+            </div>
+            <div class="effect-short">
+              ИИ ускорил итерации, но не заменял исследование и принятие решений
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="result">
+        <div class="result-left">
+          <div class="result-title">Результат системного применения ИИ</div>
+          <div class="outcomes">
+            <div class="outcome go">
+              <span class="outcome-mark">→</span>
+              <span><b>Координатор переписки</b> готовится к пилоту</span>
+            </div>
+            <div class="outcome simple">
+              <span class="outcome-mark">→</span>
+              <span><b>ML для смет</b> заменён простым объяснимым решением</span>
+            </div>
+            <div class="outcome stop">
+              <span class="outcome-mark">→</span>
+              <span><b>Рейтинг подрядчиков</b> остановлен на этапе исследования</span>
+            </div>
+          </div>
+        </div>
+        <div class="result-right">
+          <div class="big"><div class="big-n">4</div><div class="big-l">этапа применения ИИ</div></div>
+          <div class="big"><div class="big-n">3</div><div class="big-l">AI-гипотезы проверены</div></div>
+          <div class="big"><div class="big-n">133</div><div class="big-l">теста в репозитории</div></div>
+        </div>
+      </div>
+
+      <div class="footnote">
+        <div class="closing">
+          ИИ увеличил скорость и ширину исследования. <b>Постановка задачи,
+          данные, метрики, проверка результата и продуктовое решение оставались
+          за мной.</b>
+        </div>
+        <div class="tools">Claude · Claude Code · Codex · GigaChat</div>
+      </div>
+    </div>
+  </div>
+
+</div>
