@@ -1,0 +1,1729 @@
+<title>Анализ смет FRAME — как это работает</title>
+
+<style>
+  :root {
+    --paper: #F6F6F3;
+    --surface: #FFFFFF;
+    --surface-2: #EFEFEA;
+    --ink: #191B1D;
+    --ink-2: #55585C;
+    --ink-3: #83868B;
+    --rule: #DDDDD6;
+    --rule-strong: #C2C2BA;
+
+    --ok: #0B6E4F;
+    --ok-soft: #DCEDE4;
+    --high: #A93226;
+    --high-soft: #F5DEDA;
+    --low: #8F6410;
+    --low-soft: #F2E7CD;
+    --none: #7C7F85;
+    --none-soft: #E7E7E3;
+
+    --font-serif: Cambria, Georgia, "PT Serif", "Times New Roman", serif;
+    --font-sans: "Segoe UI", "Noto Sans", system-ui, -apple-system, Arial, sans-serif;
+    --font-mono: Consolas, "Cascadia Mono", "SF Mono", "Roboto Mono", monospace;
+
+    --measure: 68ch;
+    --s1: 0.4rem;
+    --s2: 0.75rem;
+    --s3: 1.15rem;
+    --s4: 1.8rem;
+    --s5: 2.8rem;
+    --s6: 4.2rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131417;
+      --surface: #1A1C20;
+      --surface-2: #212429;
+      --ink: #E8E8E4;
+      --ink-2: #A8ABB0;
+      --ink-3: #7A7D83;
+      --rule: #2C2F34;
+      --rule-strong: #3D4147;
+
+      --ok: #4FBF8F;
+      --ok-soft: #14352A;
+      --high: #E4796B;
+      --high-soft: #3A211E;
+      --low: #D4A03C;
+      --low-soft: #362B16;
+      --none: #90939A;
+      --none-soft: #24262A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #131417;
+    --surface: #1A1C20;
+    --surface-2: #212429;
+    --ink: #E8E8E4;
+    --ink-2: #A8ABB0;
+    --ink-3: #7A7D83;
+    --rule: #2C2F34;
+    --rule-strong: #3D4147;
+    --ok: #4FBF8F;
+    --ok-soft: #14352A;
+    --high: #E4796B;
+    --high-soft: #3A211E;
+    --low: #D4A03C;
+    --low-soft: #362B16;
+    --none: #90939A;
+    --none-soft: #24262A;
+  }
+
+  :root[data-theme="light"] {
+    --paper: #F6F6F3;
+    --surface: #FFFFFF;
+    --surface-2: #EFEFEA;
+    --ink: #191B1D;
+    --ink-2: #55585C;
+    --ink-3: #83868B;
+    --rule: #DDDDD6;
+    --rule-strong: #C2C2BA;
+    --ok: #0B6E4F;
+    --ok-soft: #DCEDE4;
+    --high: #A93226;
+    --high-soft: #F5DEDA;
+    --low: #8F6410;
+    --low-soft: #F2E7CD;
+    --none: #7C7F85;
+    --none-soft: #E7E7E3;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--s5) 1.25rem var(--s6);
+    display: grid;
+    gap: var(--s5);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 1040px) {
+    .shell {
+      grid-template-columns: 15.5rem minmax(0, 1fr);
+      gap: var(--s6);
+      align-items: start;
+    }
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    grid-column: 1 / -1;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+
+  .kicker {
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    max-width: var(--measure);
+    color: var(--ink-2);
+    font-size: 1.06rem;
+  }
+
+  /* ---------- table of contents ---------- */
+
+  .toc {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+
+  @media (min-width: 1040px) {
+    .toc {
+      position: sticky;
+      top: var(--s4);
+      max-height: calc(100vh - var(--s5));
+      overflow-y: auto;
+    }
+  }
+
+  .toc-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding-bottom: var(--s2);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: var(--s2);
+  }
+
+  .toc ol {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+    counter-reset: toc;
+  }
+
+  .toc a {
+    color: var(--ink-2);
+    text-decoration: none;
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.3rem;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid transparent;
+  }
+
+  .toc a::before {
+    counter-increment: toc;
+    content: counter(toc);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-3);
+  }
+
+  .toc a:hover,
+  .toc a:focus-visible {
+    color: var(--ink);
+  }
+
+  /* ---------- article ---------- */
+
+  article {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s5);
+  }
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+    scroll-margin-top: var(--s3);
+  }
+
+  h2 {
+    font-size: clamp(1.4rem, 3vw, 1.85rem);
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    padding-top: var(--s2);
+    border-top: 1px solid var(--rule-strong);
+    display: grid;
+    grid-template-columns: 2.4rem 1fr;
+    gap: 0.2rem;
+    align-items: baseline;
+  }
+
+  h2 .num {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  h3 {
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+
+  p, ul, ol.prose {
+    max-width: var(--measure);
+  }
+
+  ul.prose, ol.prose {
+    padding-left: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+  }
+
+  strong { font-weight: 700; }
+
+  em { font-style: italic; }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    padding: 0.08em 0.32em;
+    border-radius: 3px;
+  }
+
+  a { color: var(--ink); }
+
+  /* ---------- corridor diagram ---------- */
+
+  .corridor {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: var(--s3) var(--s3) var(--s2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+
+  .corridor-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem var(--s3);
+    align-items: baseline;
+    justify-content: space-between;
+    font-family: var(--font-sans);
+  }
+
+  .corridor-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .corridor-sample {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track-wrap {
+    padding-top: 1.6rem;
+    padding-bottom: 0.2rem;
+    position: relative;
+  }
+
+  .price-flag {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .track {
+    position: relative;
+    height: 0.6rem;
+    background: var(--surface-2);
+    border-radius: 999px;
+  }
+
+  .band {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--ok-soft);
+    border-radius: 999px;
+  }
+
+  .median-tick {
+    position: absolute;
+    top: -0.22rem;
+    bottom: -0.22rem;
+    width: 2px;
+    background: var(--ok);
+  }
+
+  .dot {
+    position: absolute;
+    top: 50%;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--surface);
+  }
+
+  .scale {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.45rem;
+  }
+
+  .corridor-note {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--ink-2);
+    border-top: 1px solid var(--rule);
+    padding-top: var(--s2);
+  }
+
+  .is-ok .dot { background: var(--ok); }
+  .is-ok .price-flag { color: var(--ok); }
+  .is-high .dot { background: var(--high); }
+  .is-high .price-flag { color: var(--high); }
+  .is-low .dot { background: var(--low); }
+  .is-low .price-flag { color: var(--low); }
+
+  /* ---------- verdict chips ---------- */
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-sans);
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .chip-ok { background: var(--ok-soft); color: var(--ok); }
+  .chip-high { background: var(--high-soft); color: var(--high); }
+  .chip-low { background: var(--low-soft); color: var(--low); }
+  .chip-none { background: var(--none-soft); color: var(--none); }
+
+  /* ---------- funnel ---------- */
+
+  .funnel {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  .funnel-row {
+    background: var(--surface);
+    padding: var(--s2) var(--s3);
+    display: grid;
+    gap: 0.1rem var(--s3);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 620px) {
+    .funnel-row {
+      grid-template-columns: 7rem 1fr;
+      align-items: baseline;
+    }
+  }
+
+  .funnel-n {
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .funnel-label {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .funnel-why {
+    font-family: var(--font-sans);
+    font-size: 0.84rem;
+    color: var(--ink-2);
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 620px) {
+    .funnel-why { grid-column: 2; }
+  }
+
+  .funnel-bar {
+    height: 3px;
+    background: var(--ink-3);
+    margin-top: 0.4rem;
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 620px) {
+    .funnel-bar { grid-column: 2; }
+  }
+
+  /* ---------- tables ---------- */
+
+  .scroll {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: 0.86rem;
+    min-width: 30rem;
+  }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: var(--s2) var(--s3);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  th, td {
+    padding: 0.5rem var(--s3);
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: baseline;
+  }
+
+  thead th {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  td.num, th.num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tr.winner td {
+    background: var(--ok-soft);
+    font-weight: 700;
+  }
+
+  /* ---------- callouts ---------- */
+
+  .say {
+    background: var(--surface);
+    border-left: 3px solid var(--ink);
+    padding: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+    max-width: var(--measure);
+  }
+
+  .say-label {
+    font-family: var(--font-sans);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .say q {
+    font-size: 1.02rem;
+    quotes: "«" "»";
+  }
+
+  .warn {
+    background: var(--high-soft);
+    border-left: 3px solid var(--high);
+    padding: var(--s3);
+    max-width: var(--measure);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+
+  .warn .say-label { color: var(--high); }
+
+  /* ---------- wording pairs ---------- */
+
+  .pairs {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  .pair {
+    background: var(--surface);
+    padding: var(--s2) var(--s3);
+    display: grid;
+    gap: 0.15rem var(--s3);
+    font-family: var(--font-sans);
+    font-size: 0.88rem;
+  }
+
+  @media (min-width: 700px) {
+    .pair { grid-template-columns: 1fr 1fr; }
+  }
+
+  .pair-bad { color: var(--high); text-decoration: line-through; }
+  .pair-good { color: var(--ink); font-weight: 600; }
+
+  /* ---------- q&a ---------- */
+
+  .qa {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  details {
+    background: var(--surface);
+  }
+
+  summary {
+    padding: var(--s2) var(--s3);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    font-weight: 600;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+
+  summary::-webkit-details-marker { display: none; }
+
+  summary::before {
+    content: "+";
+    font-family: var(--font-mono);
+    color: var(--ink-3);
+    font-weight: 400;
+  }
+
+  details[open] summary::before { content: "–"; }
+
+  summary:hover { background: var(--surface-2); }
+
+  summary:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
+  }
+
+  .answer {
+    padding: 0 var(--s3) var(--s3) calc(var(--s3) + 1.6rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+    border-top: 1px solid var(--rule);
+    padding-top: var(--s2);
+  }
+
+  .answer p { max-width: 62ch; }
+
+  /* ---------- misc ---------- */
+
+  .lede {
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    padding: var(--s4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+
+  .lede p { font-size: 1.1rem; }
+
+  .stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s3) var(--s5);
+    padding: var(--s3) 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .stat-n {
+    font-family: var(--font-mono);
+    font-size: 1.55rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .stat-l {
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    color: var(--ink-2);
+  }
+
+  .glossary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+  }
+
+  .term {
+    display: grid;
+    gap: 0.15rem;
+    max-width: var(--measure);
+  }
+
+  .term dt {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+
+  .term dd { color: var(--ink-2); }
+
+  footer {
+    grid-column: 1 / -1;
+    border-top: 2px solid var(--ink);
+    padding-top: var(--s3);
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    color: var(--ink-3);
+    max-width: var(--measure);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="kicker">FRAME · AI-слой · разбор модуля</div>
+    <h1>Анализ смет: что мы построили и почему именно так</h1>
+    <p class="standfirst">
+      Полный разбор одного модуля — от того, откуда берутся цены, до того, что
+      видит пользователь на экране. Написано так, чтобы после прочтения можно было
+      отвечать на любой вопрос, не заглядывая в код.
+    </p>
+  </header>
+
+  <nav class="toc" aria-label="Содержание">
+    <div class="toc-title">Содержание</div>
+    <ol>
+      <li><a href="#s1">Какую проблему решаем</a></li>
+      <li><a href="#s2">Откуда взялись цены</a></li>
+      <li><a href="#s3">Как система читает строку сметы</a></li>
+      <li><a href="#s4">Медиана и коридор</a></li>
+      <li><a href="#s5">Как выносится вердикт</a></li>
+      <li><a href="#s6">Почему в продукте не ML-модель</a></li>
+      <li><a href="#s7">Поиск аномалий: что измерено</a></li>
+      <li><a href="#s8">Что видит пользователь</a></li>
+      <li><a href="#s9">Границы системы</a></li>
+      <li><a href="#s10">Словарь терминов</a></li>
+      <li><a href="#s11">Вопросы и ответы</a></li>
+    </ol>
+  </nav>
+
+  <article>
+
+    <div class="lede">
+      <div class="say-label">Если запомнить только одно</div>
+      <p>
+        Система не говорит «вас обманывают». Она берёт каждую строку сметы,
+        находит эту работу в базе из <strong>2 369 реальных цен</strong> и показывает,
+        куда цена попадает относительно рынка. Если работы в базе нет — честно
+        отказывается оценивать. Модель машинного обучения обучена, проверена и в
+        продукт <strong>не пошла</strong>: на компаниях, которых она не видела, она
+        не точнее простой медианы.
+      </p>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat"><span class="stat-n">2 369</span><span class="stat-l">цен в базе</span></div>
+      <div class="stat"><span class="stat-n">47</span><span class="stat-l">видов работ</span></div>
+      <div class="stat"><span class="stat-n">22</span><span class="stat-l">компании</span></div>
+      <div class="stat"><span class="stat-n">7</span><span class="stat-l">городов</span></div>
+      <div class="stat"><span class="stat-n">118</span><span class="stat-l">тестов</span></div>
+    </div>
+
+    <!-- ============ 1 ============ -->
+    <section id="s1">
+      <h2><span class="num">01</span><span>Какую проблему решаем</span></h2>
+
+      <p>
+        Заказчик ремонта получает смету на 40–80 строк и не может её оценить.
+        Он не знает, сколько стоит штукатурка за квадратный метр, и у него нет
+        способа это выяснить: цены подрядчиков разбросаны по сайтам, названия работ
+        у всех разные, а спросить «а это нормальная цена?» не у кого.
+      </p>
+
+      <p>
+        При этом разброс цен на рынке огромный. По нашим данным цена одной и той же
+        работы у разных компаний отличается <strong>в 2.8 раза</strong> в типичном
+        случае и <strong>до 6.3 раза</strong> в худшем (это «Демонтаж прочее» —
+        мусорная категория, куда попадает всё разнородное). Медианные цены самих
+        компаний отличаются друг от друга в <strong>4.8 раза</strong>.
+      </p>
+
+      <p>
+        Из этого следует главный продуктовый вывод: <strong>нельзя сказать
+        «правильная цена такая-то»</strong>. Правильной цены не существует —
+        существует диапазон. Поэтому продукт отвечает не на вопрос «честная ли это
+        цена», а на вопрос «попадает ли она в рынок и о чём стоит спросить».
+      </p>
+
+      <div class="say">
+        <div class="say-label">Формулировка на защиту</div>
+        <q>Мы не детектируем обман — размеченных «честных» и «нечестных» смет не
+        существует. Мы даём заказчику рыночный контекст: вот диапазон цен на эту
+        работу, вот где в нём ваша цена, вот что стоит уточнить у подрядчика.</q>
+      </div>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section id="s2">
+      <h2><span class="num">02</span><span>Откуда взялись цены</span></h2>
+
+      <p>
+        Данные собраны собственным скрапером с <strong>24 сайтов</strong> ремонтных
+        компаний в семи городах: Москва, Санкт-Петербург, Екатеринбург, Казань,
+        Краснодар, Нижний Новгород, Новосибирск. Это публичные прайс-листы, никаких
+        закрытых источников.
+      </p>
+
+      <p>
+        Из 6 391 сырой строки в рабочую базу попало 2 369. Каждый отсев сделан по
+        явному правилу, и это важно уметь объяснить — вопрос «а куда делось две
+        трети данных» задают часто.
+      </p>
+
+      <div class="funnel">
+        <div class="funnel-row">
+          <div class="funnel-n">6 391</div>
+          <div class="funnel-label">Сырых строк со скрапера</div>
+          <div class="funnel-bar" style="width:100%"></div>
+          <div class="funnel-why">24 сайта, 7 городов. Названия работ в свободной форме.</div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-n">4 027</div>
+          <div class="funnel-label">Опознано (63%)</div>
+          <div class="funnel-bar" style="width:63%"></div>
+          <div class="funnel-why">
+            Строка совпала хотя бы с одним из 48 правил распознавания. Остальное —
+            работы вне нашего справочника, комплексные пакеты «ремонт под ключ»,
+            строки-заголовки.
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-n">2 470</div>
+          <div class="funnel-label">Прошли проверку правдоподобия</div>
+          <div class="funnel-bar" style="width:39%"></div>
+          <div class="funnel-why">
+            Убрано 1 557 строк. У каждого вида работ задан допустимый диапазон
+            (например, грунтовка 40–250 ₽/м²). Это ловит ошибки извлечения: цену
+            за упаковку материала вместо цены работы, номер телефона, попавший в
+            колонку цены.
+          </div>
+        </div>
+        <div class="funnel-row">
+          <div class="funnel-n">2 369</div>
+          <div class="funnel-label">После статистической очистки</div>
+          <div class="funnel-bar" style="width:37%"></div>
+          <div class="funnel-why">
+            Убрано ещё 101 строка правилом полутора межквартильных размахов,
+            отдельно внутри каждого вида работ. Это стандартный способ убрать
+            выбросы, не задавая порог вручную.
+          </div>
+        </div>
+      </div>
+
+      <p>
+        Правил распознавания <strong>48</strong>, а видов работ в итоговой базе
+        <strong>47</strong>. Разница в одном: «Входная дверь» не набрала ни одной
+        строки, прошедшей очистку.
+      </p>
+
+      <div class="warn">
+        <div class="say-label">Так говорить нельзя</div>
+        <p>
+          «Мы собрали 2 369 цен вручную» — неверно и легко ловится. Правильно:
+          <strong>«6 391 цена собрана скраперами, 2 369 прошли очистку»</strong>.
+          Отсев — это не потеря, а часть работы, и его надо показывать.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section id="s3">
+      <h2><span class="num">03</span><span>Как система читает строку сметы</span></h2>
+
+      <p>
+        Подрядчики пишут одну и ту же работу десятком способов: «Штукатурка стен по
+        маякам», «Выравнивание стен ротбандом», «Оштукатуривание поверхностей».
+        Прежде чем что-то сравнивать, надо понять, что все три — одно и то же.
+      </p>
+
+      <p>
+        Этим занимается <strong>нормализатор</strong>. Он устроен как список из 48
+        правил, каждое правило — текстовый шаблон и результат. Строка проверяется
+        по правилам сверху вниз, и <strong>срабатывает первое подошедшее</strong>.
+      </p>
+
+      <p>
+        Порядок правил здесь не случайность, а инженерное решение. Частные случаи
+        стоят выше общих: правило «плитка на стену» проверяется раньше, чем общее
+        «укладка плитки». Иначе всё сваливалось бы в одну кучу, а плитка на стену и
+        на пол стоят по-разному — медианы 2 816 ₽ и 1 100 ₽.
+      </p>
+
+      <p>
+        У каждого правила есть ещё две вещи: <strong>категория</strong> (Стены,
+        Пол, Потолок, Электрика, Сантехника, Демонтаж, Двери) и <strong>допустимый
+        диапазон цены</strong>, который использовался при очистке данных.
+      </p>
+
+      <h3>Что происходит, если работа не опознана</h3>
+
+      <p>
+        Ничего не выдумывается. Позиция помечается как «без оценки», и рядом пишется
+        причина: <em>«позиция не сопоставлена со справочником работ — ориентир не
+        выдаётся»</em>. Это сознательное поведение, и оно закрыто тестом: если
+        сопоставления нет, в ответе API физически отсутствуют поля с ориентиром.
+      </p>
+
+      <p>
+        На демо-смете из 14 строк три остаются без оценки: «Электромонтаж (точка)»,
+        «Установка дверей» и «Материалы (ориентировочно)». Первые две — слишком
+        размытые формулировки, третья вообще не работа.
+      </p>
+
+      <div class="say">
+        <div class="say-label">Формулировка на защиту</div>
+        <q>Отказ от ответа — это фича, а не пробел. Система, которая на любую строку
+        выдаёт число, обманывает пользователя ровно там, где он этого не заметит.</q>
+      </div>
+    </section>
+
+    <!-- ============ 4 ============ -->
+    <section id="s4">
+      <h2><span class="num">04</span><span>Медиана и коридор</span></h2>
+
+      <p>
+        Когда работа опознана, система достаёт из базы все цены на неё и считает три
+        числа. Это ядро всего модуля, и разницу между ними надо понимать твёрдо.
+      </p>
+
+      <dl class="glossary">
+        <div class="term">
+          <dt>Медиана (она же P50, «медианный ориентир»)</dt>
+          <dd>
+            Одно число — середина рынка. Половина компаний берёт дешевле, половина
+            дороже. Отвечает на вопрос «дорого или дёшево относительно типичного».
+          </dd>
+        </div>
+        <div class="term">
+          <dt>Коридор P10–P90</dt>
+          <dd>
+            Диапазон, в который попадает 80% реальных цен. Ниже P10 работает только
+            10% компаний, выше P90 — тоже 10%. Отвечает на другой вопрос: «выходит
+            ли цена за пределы нормального рынка вообще».
+          </dd>
+        </div>
+        <div class="term">
+          <dt>Размер выборки</dt>
+          <dd>
+            Сколько цен легло в расчёт. Если их меньше <strong>пяти</strong>,
+            ориентир не выдаётся вообще — статистика на трёх наблюдениях
+            бессмысленна. Порог зашит константой <code>MIN_SAMPLE = 5</code>.
+          </dd>
+        </div>
+      </dl>
+
+      <p>
+        Вот как это выглядит на реальных данных. Штукатурка стен, 79 цен в базе,
+        смета предлагает 850 ₽ за м²:
+      </p>
+
+      <div class="corridor is-ok">
+        <div class="corridor-head">
+          <span class="corridor-name">Штукатурка стен</span>
+          <span class="corridor-sample">выборка 79 цен</span>
+        </div>
+        <div class="track-wrap">
+          <span class="price-flag" style="left:59.99%">850 ₽</span>
+          <div class="track">
+            <div class="band" style="left:10.94%;width:78.12%"></div>
+            <div class="median-tick" style="left:28.77%"></div>
+            <div class="dot" style="left:59.99%"></div>
+          </div>
+          <div class="scale"><span>P10 · 300</span><span>медиана 500</span><span>P90 · 1 176</span></div>
+        </div>
+        <div class="corridor-note">
+          Цена выше медианы на 70%, но уверенно внутри коридора.
+          <span class="chip chip-ok">В рынке</span>
+        </div>
+      </div>
+
+      <p>
+        Зачем нужны оба числа, а не одно — лучше всего видно на паре примеров, где
+        они дают противоположные ответы.
+      </p>
+
+      <div class="corridor is-ok">
+        <div class="corridor-head">
+          <span class="corridor-name">Демонтаж старых покрытий</span>
+          <span class="corridor-sample">выборка 469 цен</span>
+        </div>
+        <div class="track-wrap">
+          <span class="price-flag" style="left:79.76%">450 ₽</span>
+          <div class="track">
+            <div class="band" style="left:10.94%;width:78.12%"></div>
+            <div class="median-tick" style="left:31.40%"></div>
+            <div class="dot" style="left:79.76%"></div>
+          </div>
+          <div class="scale"><span>P10 · 80</span><span>медиана 190</span><span>P90 · 500</span></div>
+        </div>
+        <div class="corridor-note">
+          Отклонение от медианы <strong>+137%</strong> — и всё равно в рынке.
+          <span class="chip chip-ok">В рынке</span>
+        </div>
+      </div>
+
+      <div class="corridor is-high">
+        <div class="corridor-head">
+          <span class="corridor-name">Покраска стен</span>
+          <span class="corridor-sample">выборка 21 цена</span>
+        </div>
+        <div class="track-wrap">
+          <span class="price-flag" style="left:89.06%">420 ₽</span>
+          <div class="track">
+            <div class="band" style="left:10.94%;width:35.51%"></div>
+            <div class="median-tick" style="left:28.69%"></div>
+            <div class="dot" style="left:89.06%"></div>
+          </div>
+          <div class="scale"><span>P10 · 200</span><span>медиана 250</span><span>P90 · 300</span></div>
+        </div>
+        <div class="corridor-note">
+          Отклонение всего <strong>+68%</strong> — но за границей коридора.
+          <span class="chip chip-high">Выше рынка</span>
+        </div>
+      </div>
+
+      <p>
+        Демонтаж отклоняется от медианы вдвое сильнее покраски, но с ним всё в
+        порядке, а с покраской — нет. Причина в ширине коридора: у демонтажа рынок
+        разбросан от 80 до 500 ₽, у покраски зажат между 200 и 300 ₽.
+      </p>
+
+      <p>
+        <strong>Отсюда правило продукта:</strong> флаг ставится по выходу за коридор,
+        а не по отклонению от медианы. Интерфейс, который кричал бы на демонтаж и
+        молчал про покраску, был бы хуже, чем никакого.
+      </p>
+
+      <p>
+        Цена может уйти и вниз. Тогда это не «выгодно», а тоже вопрос — что именно
+        не входит в такую цену:
+      </p>
+
+      <div class="corridor is-low">
+        <div class="corridor-head">
+          <span class="corridor-name">Плитка на стену</span>
+          <span class="corridor-sample">выборка 5 цен — минимум для ориентира</span>
+        </div>
+        <div class="track-wrap">
+          <span class="price-flag" style="left:10.94%">2 100 ₽</span>
+          <div class="track">
+            <div class="band" style="left:20.66%;width:68.40%"></div>
+            <div class="median-tick" style="left:68.02%"></div>
+            <div class="dot" style="left:10.94%"></div>
+          </div>
+          <div class="scale"><span>P10 · 2 222</span><span>медиана 2 816</span><span>P90 · 3 080</span></div>
+        </div>
+        <div class="corridor-note">
+          Ниже нижней границы рынка.
+          <span class="chip chip-low">Ниже рынка</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5 ============ -->
+    <section id="s5">
+      <h2><span class="num">05</span><span>Как выносится вердикт</span></h2>
+
+      <p>
+        Итоговых состояний у строки всего четыре, и каждое означает конкретное
+        действие для пользователя.
+      </p>
+
+      <div class="scroll">
+        <table>
+          <caption>Состояния строки сметы</caption>
+          <thead>
+            <tr>
+              <th>Состояние</th>
+              <th>Когда возникает</th>
+              <th>Что делать пользователю</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chip chip-ok">В рынке</span></td>
+              <td>Цена внутри P10–P90</td>
+              <td>Ничего. Вопросов нет</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-high">Выше рынка</span></td>
+              <td>Цена больше P90</td>
+              <td>Спросить, что входит в цену: материалы, подготовка основания, вывоз мусора</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-low">Ниже рынка</span></td>
+              <td>Цена меньше P10</td>
+              <td>Уточнить объём работ и чьи материалы. Низкая цена не означает плохое качество</td>
+            </tr>
+            <tr>
+              <td><span class="chip chip-none">Без оценки</span></td>
+              <td>Работа не опознана, либо в базе меньше 5 цен</td>
+              <td>Попросить расшифровать состав позиции</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Результат на демо-смете из 14 строк: <strong>11 сопоставлено</strong> со
+        справочником, из них 8 в рынке и 3 вне коридора; <strong>3 остались без
+        оценки</strong>.
+      </p>
+
+      <h3>Запрещённые слова</h3>
+
+      <p>
+        В интерфейсе и в устном рассказе есть слова, которые использовать нельзя.
+        Это не стилистика, а защита от юридически и методологически неверного
+        утверждения: мы не измеряли добросовестность и не имеем права о ней
+        высказываться. На это есть автоматический тест, который проверяет ответ API
+        на запрещённые формулировки.
+      </p>
+
+      <div class="pairs">
+        <div class="pair">
+          <span class="pair-bad">переплата 82 370 ₽</span>
+          <span class="pair-good">выше медианного ориентира на 82 370 ₽</span>
+        </div>
+        <div class="pair">
+          <span class="pair-bad">детектор мошенничества</span>
+          <span class="pair-good">система поиска рыночных отклонений</span>
+        </div>
+        <div class="pair">
+          <span class="pair-bad">подрядчик завысил цену</span>
+          <span class="pair-good">цена вышла за верхнюю границу рынка</span>
+        </div>
+        <div class="pair">
+          <span class="pair-bad">справедливая цена — 500 ₽</span>
+          <span class="pair-good">медиана рынка — 500 ₽</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6 ============ -->
+    <section id="s6">
+      <h2><span class="num">06</span><span>Почему в продукте не ML-модель</span></h2>
+
+      <p>
+        Это самая ценная часть работы и самая вероятная тема вопросов. Модель была
+        обучена, честно проверена и <strong>сознательно не выпущена</strong>.
+        История такая.
+      </p>
+
+      <h3>Шаг 1. Лестница базовых решений</h3>
+
+      <p>
+        Прежде чем обучать что-то сложное, надо знать, что даёт простое. Мы
+        выстроили лестницу от самого примитивного решения к самому сложному и
+        прогнали все по одной и той же пятикратной кросс-валидации.
+      </p>
+
+      <p>
+        Метрика — <strong>MAPE</strong>, средняя ошибка в процентах: насколько
+        в среднем предсказание промахивается мимо реальной цены. Меньше — лучше.
+        Рядом <strong>R²</strong> — доля разброса цен, которую метод объясняет.
+        Больше — лучше, максимум 1.0.
+      </p>
+
+      <div class="scroll">
+        <table>
+          <caption>Пятикратная кросс-валидация, среднее ± разброс между фолдами</caption>
+          <thead>
+            <tr>
+              <th>Метод</th>
+              <th class="num">MAPE, %</th>
+              <th class="num">R²</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Одна медиана на всё</td><td class="num">95.6 ± 4.4</td><td class="num">−0.100</td></tr>
+            <tr><td>Медиана по виду работы</td><td class="num">43.6 ± 0.6</td><td class="num">0.695</td></tr>
+            <tr><td>Медиана по паре работа + город</td><td class="num">44.9 ± 1.0</td><td class="num">0.624</td></tr>
+            <tr class="winner"><td>Линейная регрессия</td><td class="num">38.7 ± 0.6</td><td class="num">0.759 ± 0.012</td></tr>
+            <tr><td>XGBoost с тюнингом</td><td class="num">38.2 ± 0.6</td><td class="num">0.744</td></tr>
+            <tr><td>XGBoost из коробки</td><td class="num">40.7 ± 0.9</td><td class="num">0.708</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Отсюда два вывода. Первый: <strong>моделирование окупается</strong> —
+        линейная регрессия выигрывает у медианы 4.9 процентных пункта при разбросе
+        между фолдами 0.6 пункта, то есть выигрыш явно больше шума. Второй:
+        <strong>дальнейшее усложнение не окупается</strong> — XGBoost выигрывает у
+        линейной всего 0.5 пункта при том же разбросе 0.6. По заранее заданному
+        правилу простоты берём линейную.
+      </p>
+
+      <p>
+        Отдельная деталь, которую приятно рассказать: ручная медиана по паре
+        «работа + город» работает <em>хуже</em>, чем просто по работе. Причина —
+        ячейки пустеют: на конкретную работу в конкретном городе остаётся слишком
+        мало цен. Линейная модель этой проблемы не имеет, потому что оценивает
+        эффект города сразу по всем работам.
+      </p>
+
+      <h3>Шаг 2. Проверка, которая всё изменила</h3>
+
+      <p>
+        Кросс-валидация делит данные случайно. Но в реальности продукт встретит
+        смету от компании, которой в обучении не было вовще. Чтобы это проверить,
+        сделали <strong>leave-one-company-out</strong>: 22 прогона, в каждом одна
+        компания целиком убрана из обучения и оставлена на тест.
+      </p>
+
+      <div class="scroll">
+        <table>
+          <caption>Leave-one-company-out, 22 компании</caption>
+          <thead>
+            <tr>
+              <th>Метод</th>
+              <th class="num">MAPE, %</th>
+              <th class="num">R²</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="winner"><td>Медиана по виду работы</td><td class="num">43.5 ± 9.9</td><td class="num">0.651</td></tr>
+            <tr><td>Линейная регрессия</td><td class="num">44.0 ± 10.9</td><td class="num">0.704</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Преимущество исчезло. На незнакомой компании модель по MAPE <strong>не бьёт
+        медиану</strong> и выигрывает лишь в <strong>12 случаях из 22</strong> —
+        это чуть лучше подбрасывания монеты.
+      </p>
+
+      <p>
+        Причина понятна и её надо назвать самому. Среди признаков модели есть
+        <code>source</code> — компания-источник. На случайной разбивке он работает
+        как шпаргалка: модель запоминает, что «эта компания в целом дорогая», и
+        подтягивает предсказание. При смене компании признак становится
+        бесполезным, и выигрыш испаряется.
+      </p>
+
+      <p>
+        По R² модель всё же лучше (0.704 против 0.651) — она правильнее
+        <em>ранжирует</em> работы по дороговизне, но не точнее в процентах.
+        Для продукта, где показывается конкретное число, важен именно процент.
+      </p>
+
+      <h3>Шаг 3. Найденная и исправленная утечка</h3>
+
+      <p>
+        При проверке LOCO обнаружилась ошибка в собственном коде: квантили признака
+        <code>work_q</code> считались на всём наборе, включая тестовую компанию.
+        Это <strong>утечка</strong> — информация о тесте просачивалась в обучение.
+        Расчёт перенесли внутрь фолда. После исправления ROC-AUC поиска аномалий
+        сдвинулся с 0.872 до 0.879, то есть утечка была не источником результата.
+      </p>
+
+      <div class="say">
+        <div class="say-label">Формулировка на защиту</div>
+        <q>Я проверил модель методом, который её ломает — на компании, которой она
+        не видела. Она проиграла простому baseline. Поэтому в продукт пошла не
+        модель, а рыночный коридор: он не хуже по точности, но его можно объяснить
+        пользователю.</q>
+      </div>
+
+      <h3>Что ещё показала модель</h3>
+
+      <p>
+        Даже не попав в продукт, модель дала полезное знание. Важность признаков:
+        вид работы <strong>48.8%</strong>, категория <strong>43.3%</strong>,
+        компания 4.9%, регион 1.7%, единица измерения 1.3%. То есть цену почти
+        полностью определяет <em>что делают</em>, а не <em>кто</em> и <em>где</em>.
+        Это прямо оправдывает архитектуру коридоров, которые строятся по виду
+        работы.
+      </p>
+
+      <p>
+        Анализ ошибок по видам работ: лучше всего предсказывается укладка ламината
+        (ошибка 8.5%), хуже всего — штробление (74.4%) и демонтаж обоев (59.5%).
+        Закономерность читаемая: точны те работы, где цена определяется квадратным
+        метром, и неточны те, где она зависит от невидимых в прайсе условий —
+        материал стены, толщина слоя, состояние объекта.
+      </p>
+    </section>
+
+    <!-- ============ 7 ============ -->
+    <section id="s7">
+      <h2><span class="num">07</span><span>Поиск аномалий: что реально измерено</span></h2>
+
+      <p>
+        Здесь надо быть особенно аккуратным в формулировках, потому что цифра
+        выглядит внушительно, а означает не то, что кажется.
+      </p>
+
+      <p>
+        Разметки «завышенных» цен не существует — никто не публикует смету с
+        пометкой «здесь обманули». Поэтому измерялось <strong>согласие двух
+        независимых признаков</strong> экстремальной цены: остатка линейной модели,
+        не видевшей эту компанию, и коридора P10–P90, посчитанного только на
+        обучающей части фолда. Это называется <strong>proxy agreement</strong>.
+      </p>
+
+      <div class="scroll">
+        <table>
+          <caption>Согласие с независимым коридором, LOCO, 2 364 позиции</caption>
+          <thead>
+            <tr><th>Метрика</th><th class="num">Значение</th><th>Что означает</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>ROC-AUC</td><td class="num">0.870</td><td>Насколько хорошо метод отделяет экстремальные цены от обычных</td></tr>
+            <tr><td>PR-AUC</td><td class="num">0.675</td><td>То же, но честнее при редких событиях</td></tr>
+            <tr><td>Precision</td><td class="num">0.819</td><td>Из 100 поднятых флагов около 82 подтверждаются коридором</td></tr>
+            <tr><td>Recall</td><td class="num">0.329</td><td>Но находится лишь треть всех экстремальных цен</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Recall 0.329 — это честная слабость, и прятать её не нужно. Метод настроен
+        осторожно: лучше промолчать, чем ложно обвинить.
+      </p>
+
+      <p>
+        Второй, более суровый тест: в данные искусственно внесли накрутки от 25% до
+        80% и попросили их найти. Результат — <strong>ROC-AUC 0.583</strong> при
+        случайном угадывании 0.5. Практически ничего.
+      </p>
+
+      <div class="warn">
+        <div class="say-label">Это надо сказать самому, не дожидаясь вопроса</div>
+        <p>
+          Умеренную накрутку в 25–30% метод не ловит: она тонет в естественном
+          разбросе рынка, где цены на одну работу отличаются в 2.8 раза. Ловятся
+          только грубые выбросы. Именно поэтому продукт формулирует результат как
+          «повод спросить», а не как обвинение.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 8 ============ -->
+    <section id="s8">
+      <h2><span class="num">08</span><span>Что видит пользователь</span></h2>
+
+      <p>
+        Экран «Проверка сметы» в демо полностью живой: при загрузке он отправляет
+        смету на бэкенд и все числа получает из реальной базы. Ничего не
+        захардкожено.
+      </p>
+
+      <h3>Устройство экрана</h3>
+
+      <ul class="prose">
+        <li>Три сводные карточки: <strong>в рынке</strong>, <strong>стоит
+        спросить</strong>, <strong>без оценки</strong>. Кликабельны — фильтруют
+        таблицу.</li>
+        <li>Блок <strong>«Что спросить у подрядчика»</strong> — готовые
+        формулировки только по проблемным строкам, с числами из базы.</li>
+        <li>Таблица позиций, где у каждой строки нарисован свой коридор: зелёная
+        зона, засечка медианы, точка цены.</li>
+        <li>Блок «Как читать проверку» — объяснение самой диаграммы, потому что
+        пользователь видит её впервые.</li>
+      </ul>
+
+      <h3>Генератор случайных смет</h3>
+
+      <p>
+        Кнопка <strong>«Случайная смета»</strong> собирает новую смету и тут же
+        прогоняет её через живой API. Пул — 43 распознаваемых вида работ плюс 6
+        намеренно размытых формулировок вроде «Прочие работы по объекту». Цена
+        берётся как прайсовая ставка, умноженная на случайный коэффициент от 0.5 до
+        2. Кнопка <strong>«Поток смет»</strong> делает это автоматически каждые 6
+        секунд.
+      </p>
+
+      <p>
+        Ключевая деталь, ради которой это сделано: <strong>генератор не видит
+        рыночную базу</strong>. Он живёт во фронтенде и знает только прайс
+        подрядчика; коридоры лежат на бэкенде и наружу не отдаются. Подогнать цену
+        под ответ он физически не может, потому что ответа не знает. Проверяется за
+        пять секунд через вкладку Network в браузере.
+      </p>
+
+      <p>
+        Замер на 12 прогонах: проверено 136 позиций, <strong>40 вне коридора
+        (29%)</strong>, 23 без оценки.
+      </p>
+
+      <div class="warn">
+        <div class="say-label">Границы того, что доказывает генератор</div>
+        <p>
+          Он доказывает, что пайплайн живой и работает на невиданных данных.
+          Он <strong>не</strong> доказывает, что вердикты правильные — размеченной
+          правды нет. Фразы «модель определяет верно или неверно» надо избегать,
+          правильная — «модель определяет расхождения с рынком».
+        </p>
+      </div>
+
+      <h3>Честность режимов</h3>
+
+      <p>
+        Если бэкенд недоступен, экран не притворяется живым. Появляется баннер
+        «Живой расчёт недоступен» и метка <code>DEMO_FIXTURE</code>, а показанные
+        числа помечены как сохранённый снимок прошлого ответа. Это проверено
+        вручную: бэкенд останавливался, страница перезагружалась.
+      </p>
+    </section>
+
+    <!-- ============ 9 ============ -->
+    <section id="s9">
+      <h2><span class="num">09</span><span>Границы системы</span></h2>
+
+      <p>
+        Список того, чего система не делает. Проговорить это самому — сильнее, чем
+        отвечать на пойманное несоответствие.
+      </p>
+
+      <ul class="prose">
+        <li><strong>Не оценивает добросовестность.</strong> Только положение цены
+        относительно публичного рынка.</li>
+        <li><strong>Не ловит умеренную накрутку.</strong> ROC-AUC 0.583 на
+        синтетическом стресс-тесте — накрутка 25–30% неотличима от нормального
+        разброса.</li>
+        <li><strong>Не покрывает материалы.</strong> База — цены работ. Строка
+        «Материалы» всегда остаётся без оценки.</li>
+        <li><strong>Не учитывает контекст объекта.</strong> Этаж, состояние стен,
+        срочность, класс отделки в публичных прайсах не указаны.</li>
+        <li><strong>База неравномерна.</strong> На компанию приходится от 14 до 237
+        цен, медиана 92. На «Плитку на стену» всего 5 цен — ровно порог.</li>
+        <li><strong>Нет живого прода.</strong> Демо работает локально.</li>
+        <li><strong>Модель не выпущена.</strong> Она существует и измерена, но в
+        интерфейсе не используется.</li>
+      </ul>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section id="s10">
+      <h2><span class="num">10</span><span>Словарь терминов</span></h2>
+
+      <p>
+        Слова, которые прозвучат в вопросах. Определения короткие — ровно чтобы
+        уверенно ответить.
+      </p>
+
+      <dl class="glossary">
+        <div class="term">
+          <dt>Baseline</dt>
+          <dd>Простое решение, с которым сравнивают сложное. Если сложное не бьёт
+          baseline — оно не нужно. У нас baseline — подстановка медианы по виду работы.</dd>
+        </div>
+        <div class="term">
+          <dt>MAPE</dt>
+          <dd>Средняя ошибка в процентах от реальной цены. MAPE 40% значит, что
+          предсказание в среднем промахивается на 40%.</dd>
+        </div>
+        <div class="term">
+          <dt>R²</dt>
+          <dd>Доля разброса данных, которую метод объясняет. 1.0 — идеально, 0 — не
+          лучше среднего, отрицательное — хуже среднего.</dd>
+        </div>
+        <div class="term">
+          <dt>Кросс-валидация (CV)</dt>
+          <dd>Данные делятся на 5 частей, модель обучается на четырёх и проверяется
+          на пятой, и так пять раз. Даёт средний результат и разброс.</dd>
+        </div>
+        <div class="term">
+          <dt>Leave-one-company-out (LOCO)</dt>
+          <dd>Та же идея, но делят не случайно, а по компаниям: одна компания
+          целиком уходит в тест. Проверяет, работает ли модель на новом источнике.</dd>
+        </div>
+        <div class="term">
+          <dt>Domain shift</dt>
+          <dd>Ситуация, когда данные в работе отличаются от данных в обучении.
+          Именно на нём наша модель и посыпалась.</dd>
+        </div>
+        <div class="term">
+          <dt>Утечка (data leakage)</dt>
+          <dd>Когда информация из теста случайно попадает в обучение и результат
+          получается завышенным. У нас была одна, найдена и исправлена.</dd>
+        </div>
+        <div class="term">
+          <dt>Precision и Recall</dt>
+          <dd>Precision — какая доля поднятых флагов оказалась верной. Recall —
+          какую долю всех проблем удалось найти. У нас 0.819 и 0.329: почти не
+          ошибаемся, но находим треть.</dd>
+        </div>
+        <div class="term">
+          <dt>ROC-AUC</dt>
+          <dd>Насколько хорошо метод отделяет одно от другого. 0.5 — уровень
+          случайного угадывания, 1.0 — идеально.</dd>
+        </div>
+        <div class="term">
+          <dt>Proxy agreement</dt>
+          <dd>Согласие двух независимых косвенных признаков, когда прямой разметки
+          нет. Наши 0.870 — это оно, а не «точность детекции завышений».</dd>
+        </div>
+        <div class="term">
+          <dt>P10 / P50 / P90 (перцентили)</dt>
+          <dd>Значения, ниже которых лежит 10%, 50% и 90% всех цен. P50 — это и есть
+          медиана.</dd>
+        </div>
+        <div class="term">
+          <dt>IQR</dt>
+          <dd>Межквартильный размах — расстояние между 25-м и 75-м перцентилем.
+          Используется для отсечения выбросов при очистке данных.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section id="s11">
+      <h2><span class="num">11</span><span>Вопросы и ответы</span></h2>
+
+      <p>
+        Ответы свёрнуты — можно проверить себя. Сначала попробуй ответить сам,
+        потом раскрой.
+      </p>
+
+      <div class="qa">
+        <details>
+          <summary>Так у вас ML работает или нет?</summary>
+          <div class="answer">
+            <p>
+              Работает нормализация позиций — распознавание работ из свободного
+              текста. Регрессия цены обучена и проверена, но отклонена: на компании
+              вне обучающей выборки она не бьёт медиану. Это решение по заранее
+              заданному правилу, а не отсутствие результата.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Почему не взяли нейросеть или большую модель?</summary>
+          <div class="answer">
+            <p>
+              У нас 2 369 строк и пять категориальных признаков. Даже XGBoost на
+              таких данных не даёт значимого выигрыша над линейной регрессией — 0.5
+              процентных пункта при разбросе между фолдами 0.6. Признаки чисто
+              категориальные с аддитивными эффектами в логарифме цены, на такой
+              структуре бустингу нечего добавить. Более тяжёлая модель тем более не
+              имеет смысла.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Почему данных так мало?</summary>
+          <div class="answer">
+            <p>
+              2 369 цен по 47 работам, в среднем полсотни цен на работу. Для
+              построения коридоров этого достаточно. Для обобщения на новые
+              компании — нет, и это ровно то, что показал LOCO. Расширение базы —
+              в роадмапе, и я знаю, какую именно проблему оно решит.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Какая у вас точность определения завышенных цен?</summary>
+          <div class="answer">
+            <p>
+              Такой метрики не существует, потому что нет размеченных завышений —
+              никто не публикует смету с пометкой «здесь обманули». Измерено
+              согласие двух независимых косвенных признаков: ROC-AUC 0.870,
+              precision 0.819, recall 0.329. Это proxy agreement, а не точность
+              детекции обмана.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Зачем тогда вообще обучали модель, если не используете?</summary>
+          <div class="answer">
+            <p>
+              Чтобы знать ответ. Без проверки на новых компаниях я бы выпустил
+              модель, которая на реальных сметах не лучше медианы, и не узнал бы об
+              этом. Плюс модель дала важность признаков: цену на 92% определяет вид
+              работы и категория, а не компания и не город — это оправдывает саму
+              архитектуру коридоров.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Чем медиана отличается от коридора?</summary>
+          <div class="answer">
+            <p>
+              Медиана — одно число, середина рынка, отвечает «дорого или дёшево
+              относительно типичного». Коридор P10–P90 — диапазон, отвечает
+              «выходит ли цена за пределы нормального рынка». Второй вопрос важнее:
+              демонтаж может отклоняться от медианы на 137% и оставаться в рынке, а
+              покраска отклоняется на 68% и уже вне коридора.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Почему не показываете пользователю предсказание модели?</summary>
+          <div class="answer">
+            <p>
+              Две причины. Первая — на новом источнике оно не точнее медианы.
+              Вторая — его нельзя объяснить. Фразу «рынок 300–1 176 ₽, у вас 850»
+              можно показать подрядчику и обсудить. Фразу «модель предсказала 612 ₽»
+              обсудить нельзя, это чёрный ящик.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>А если подрядчик завысил всё на 20% равномерно?</summary>
+          <div class="answer">
+            <p>
+              Не поймаем, и я это измерил: на синтетическом стресс-тесте с
+              накрутками 25–80% ROC-AUC 0.583 при случайном 0.5. Умеренная накрутка
+              тонет в естественном разбросе рынка, где цены на одну работу
+              отличаются в 2.8 раза. Ловятся только грубые выбросы. Поэтому продукт
+              и формулирует результат как повод спросить.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Что если работы нет в вашем справочнике?</summary>
+          <div class="answer">
+            <p>
+              Позиция помечается «без оценки» с указанием причины, ориентир не
+              выдаётся. На демо-смете так происходит с тремя строками из
+              четырнадцати. Это закрыто тестом: без сопоставления поля с ориентиром
+              в ответе API отсутствуют физически.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Откуда уверенность, что демо не подстроено?</summary>
+          <div class="answer">
+            <p>
+              Есть кнопка генерации случайной сметы. Генератор живёт во фронтенде и
+              рыночную базу не видит — коридоры считаются на бэкенде и наружу не
+              отдаются. Можно открыть вкладку Network и посмотреть, что уходит
+              случайная цена, а возвращается вердикт. На 12 прогонах: 136 позиций,
+              29% вне коридора.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Почему медиана по паре «работа + город» работает хуже, чем просто по работе?</summary>
+          <div class="answer">
+            <p>
+              Ячейки пустеют. На конкретную работу в конкретном городе остаётся
+              слишком мало наблюдений, и медиана становится шумной. Линейная модель
+              этой проблемы не имеет, потому что оценивает эффект города сразу по
+              всем работам. Это хороший пример того, что «больше признаков» не
+              значит «лучше».
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Вы говорите про утечку — что это было и почему вы её нашли?</summary>
+          <div class="answer">
+            <p>
+              Квантили признака <code>work_q</code> считались на всём наборе,
+              включая тестовую компанию. Нашлась при разборе результатов LOCO —
+              они выглядели слишком хорошо для условий задачи. Расчёт перенесли
+              внутрь фолда, ROC-AUC сдвинулся с 0.872 до 0.879. То есть утечка была
+              реальной ошибкой, но не источником результата.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Почему recall всего 0.33? Это же плохо.</summary>
+          <div class="answer">
+            <p>
+              Это осознанный компромисс. При precision 0.819 и recall 0.329 система
+              редко ошибается, но находит треть. Для продукта, который показывает
+              заказчику «спросите у подрядчика», ложная тревога дороже пропуска:
+              она портит отношения с подрядчиком и подрывает доверие к продукту.
+              Порог можно сдвинуть, если продуктовая гипотеза изменится.
+            </p>
+          </div>
+        </details>
+
+        <details>
+          <summary>Как вы выбрали именно линейную регрессию?</summary>
+          <div class="answer">
+            <p>
+              По заранее заданному правилу простоты: сложная модель берётся только
+              если её выигрыш больше разброса между фолдами. XGBoost выиграл 0.5
+              пункта MAPE при разбросе 0.6 — не берём. Честная оговорка: тюнинг и
+              сравнение шли на одних и тех же фолдах, вложенной кросс-валидации не
+              проводилось, так что это инженерная эвристика, а не статистический тест.
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <footer>
+      Все числа в документе получены прогоном кода на текущих данных
+      <span style="white-space:nowrap">(28 июля 2026)</span> и совпадают с
+      <code>reports/metrics.json</code>, <code>reports/baseline_ladder.json</code>
+      и живым ответом <code>/api/estimate/analyze</code>.
+    </footer>
+
+  </article>
+</div>
