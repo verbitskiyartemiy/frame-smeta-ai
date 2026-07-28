@@ -8,6 +8,7 @@ import pytest
 
 import demo_api
 import hybrid_coordinator
+import knowledge
 
 
 @pytest.fixture
@@ -268,3 +269,73 @@ def test_assistant_reports_failure_without_inventing(client):
 
     assert response.status_code == 502
     assert response.get_json()["answered"] is False
+
+
+KNOW = [{"stage": "Электромонтаж", "kind": "документы",
+         "text": "До оплаты этапа запрашивают акт скрытых работ и фотофиксацию трасс."},
+        {"stage": "Стяжка пола", "kind": "порядок",
+         "text": "Цементной стяжке нужно около четырёх недель до укладки покрытия."}]
+
+
+def _with_knowledge(reply, fragments=KNOW):
+    """Подменяем и поиск, и LLM: тесты не должны ходить в сеть."""
+    return (mock.patch.object(knowledge, "search", lambda *a, **k: (fragments, "lexical")),
+            mock.patch.object(hybrid_coordinator, "call_llm", _llm_returning(reply)))
+
+
+def test_assistant_proposes_action_for_confirmation(client):
+    reply = {"answered": True, "source_ids": [2],
+             "answer": "Перед приёмкой запросите акт скрытых работ.",
+             "proposed_action": {"title": "Запросить акт скрытых работ",
+                                 "why": "без него состав работ не доказать"}}
+    search_patch, llm_patch = _with_knowledge(reply)
+    with search_patch, llm_patch:
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Что перед приёмкой электрики?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is True
+    assert body["proposed_action"]["title"] == "Запросить акт скрытых работ"
+    assert body["proposed_action"]["status"] == "pending", (
+        "действие остаётся предложением до подтверждения человеком")
+    assert body["knowledge_used"] == ["Электромонтаж", "Стяжка пола"]
+
+
+def test_assistant_allows_numbers_taken_from_knowledge(client):
+    """Число из базы знаний — законный источник, а не выдумка."""
+    fragments = [{"stage": "Стяжка пола", "kind": "порядок",
+                  "text": "Цементной стяжке нужно около 28 дней до укладки покрытия."}]
+    reply = {"answered": True, "source_ids": [1],
+             "answer": "Плитку кладут через 28 дней после заливки стяжки.",
+             "proposed_action": {"title": "", "why": ""}}
+
+    search_patch, llm_patch = _with_knowledge(reply, fragments)
+    with search_patch, llm_patch:
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Когда класть плитку?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is True, "28 взято из знаний, это не выдуманное число"
+    assert body["proposed_action"] is None, "пустой заголовок — действия нет"
+
+
+def test_assistant_rejects_number_absent_from_both_sources(client):
+    reply = {"answered": True, "source_ids": [1],
+             "answer": "Готовность проекта 87 процентов.",
+             "proposed_action": {"title": "", "why": ""}}
+    search_patch, llm_patch = _with_knowledge(reply)
+    with search_patch, llm_patch:
+        body = client.post("/api/assistant/ask",
+                           json={"question": "Какая готовность?",
+                                 "facts": FACTS}).get_json()
+
+    assert body["answered"] is False
+    assert "87" in body["reason"]
+
+
+def test_knowledge_lexical_fallback_finds_stage():
+    found = knowledge._lexical("что проверить при приёмке электромонтажа",
+                               knowledge.load_fragments())
+    found.sort(key=lambda pair: pair[0], reverse=True)
+    assert found, "запасной поиск обязан что-то находить"
+    assert found[0][1]["stage"] == "Электромонтаж"
