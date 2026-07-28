@@ -1,0 +1,16 @@
+{
+ "n_evaluated": 2359,
+ "n_abstained": 10,
+ "abstention_rate": 0.004,
+ "coverage": 0.786,
+ "false_alarm_rate": 0.214,
+ "flagged_above": 0.109,
+ "flagged_below": 0.105,
+ "median_relative_width": 1.35,
+ "inflation_recall": {
+  "+14%": 0.121,
+  "+25%": 0.157,
+  "+50%": 0.292,
+  "+100%": 0.518
+ }
+}

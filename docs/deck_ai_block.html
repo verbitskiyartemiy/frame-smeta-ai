@@ -375,6 +375,25 @@
   .fx-text { font-size: 21px; line-height: 1.4; color: var(--ink-2); }
   .fx-text b { color: var(--ink); }
 
+  /* ---------- закрытые возражения ---------- */
+  .closed {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 26px;
+    margin-top: 26px;
+  }
+
+  .closed-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-left: 4px solid var(--blue);
+    padding-left: 18px;
+  }
+
+  .closed-q { font-size: 21px; font-weight: 700; color: var(--ink); }
+  .closed-a { font-size: 19px; line-height: 1.35; color: var(--ink-2); }
+
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; }
 
   .col-head {
@@ -628,12 +647,34 @@
         </div>
 
         <div class="vs-card">
-          <div class="vs-label">Что ещё проверили и закрыли</div>
-          <p class="vs-note" style="margin-top:0">
-            <b>Больше данных.</b> Кривая обучения от 3 до 21 компании — разрыв не открывается.<br><br>
-            <b>Текст позиции.</b> Эмбеддинги и символьные n-граммы: +0.6 п.п. при разбросе 9.9 п.п.<br><br>
-            <b>Потолок признаков.</b> Оракул, знающий работу и город, даёт 37.3% — запас меньше 1.5 п.п.
+          <div class="vs-label">А коридор — перенёсся</div>
+          <div class="vs-row">
+            <span class="vs-who">накрывает рыночных цен</span>
+            <span class="vs-num strong">78.6%</span>
+          </div>
+          <div class="vs-row">
+            <span class="vs-who">заложено по построению</span>
+            <span class="vs-num weak">80%</span>
+          </div>
+          <p class="vs-note">
+            На компании вне обучения калибровка держится. <b>Преимущество модели при
+            смене источника исчезло, калибровка коридора — нет.</b> Ширина 1.35 от медианы.
           </p>
+        </div>
+      </div>
+
+      <div class="closed">
+        <div class="closed-item">
+          <span class="closed-q">«Соберите больше данных»</span>
+          <span class="closed-a">кривая обучения от 3 до 21 компании — разрыв не открывается</span>
+        </div>
+        <div class="closed-item">
+          <span class="closed-q">«Вы выбросили описание позиции»</span>
+          <span class="closed-a">эмбеддинги и символьные n-граммы: +0.6 п.п. при разбросе 9.9</span>
+        </div>
+        <div class="closed-item">
+          <span class="closed-q">«Возьмите модель посложнее»</span>
+          <span class="closed-a">XGBoost: 0.5 п.п. при разбросе 0.6 — правило одной стандартной ошибки</span>
         </div>
       </div>
 
