@@ -18,6 +18,8 @@ _CORR = _DF.groupby("canonical_work")["price"].agg(
     p90=lambda s: s.quantile(0.90),
     n="count",
 )
+_SOURCE = (f"рыночная база FRAME: {len(_DF)} цен, {_DF['source'].nunique()} компаний, "
+           f"{_DF['region'].nunique()} городов")
 
 
 def _num(x):
@@ -74,7 +76,7 @@ def get_market_corridor(canonical_work: str) -> dict:
             "median": round(float(row.p50), 2),
             "p90": round(float(row.p90), 2),
             "sample_size": int(row.n),
-            "source": "рыночная база FRAME: 2108 цен, 22 компании, 7 городов"}
+            "source": _SOURCE}
 
 
 def check_arithmetic(lines: list[dict], declared_total: float | None = None) -> dict:

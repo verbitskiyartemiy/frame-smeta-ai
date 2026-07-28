@@ -19,6 +19,11 @@ wandb/
 *.pkl
 *.joblib
 
+# Кэши локальных эмбеддингов: пересчитываются из данных за пару минут,
+# держать мегабайты бинарников в истории смысла нет.
+data/processed/name_embeddings.npz
+data/processed/classifier_embeddings.npz
+
 # Secrets
 .env
 *.key
@@ -33,3 +38,6 @@ gradio.log
 
 # Keep data folder structure but ignore large generated files if needed
 # (датасет оставляем в репозитории — он небольшой и нужен для воспроизводимости)
+
+# Логи локального демо-API
+api.log
